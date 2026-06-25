@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { STAFF_PALETTE } from './constants';
 
 export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -19,8 +25,19 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">Manage Team</h2>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="modal-title" id="staff-modal-title">Manage Facilitators</h2>
+        {staff.length === 0 && (
+          <p className="staff-empty-hint">
+            Add your team members below — they'll appear as options when creating activities.
+          </p>
+        )}
         <ul className="staff-list">
           {staff.map((s, i) => (
             <li key={s.id} className="staff-item">
@@ -37,7 +54,7 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="New team member name"
+            placeholder="New facilitator name"
             autoComplete="off"
           />
           <button type="submit" className="btn-primary">Add</button>
