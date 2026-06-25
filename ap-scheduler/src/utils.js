@@ -1,7 +1,8 @@
-export function getMonday(date) {
+// Returns the most recent Saturday (the start of the week) at local midnight.
+export function getWeekStart(date) {
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
+  const day = d.getDay(); // 0 = Sunday … 6 = Saturday
+  const diff = -((day + 1) % 7); // days back to the preceding Saturday (0 if today is Saturday)
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;

@@ -12,12 +12,12 @@ import {
   fetchTemplates, saveTemplate, deleteTemplate, applyTemplate,
   isShared,
 } from './api';
-import { getMonday, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
+import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
 import { ACTIVITY_COLORS } from './constants';
 import { exportICS, exportCSV } from './exporters';
 import './App.css';
 
-const currentWeek = formatWeekStart(getMonday(new Date()));
+const currentWeek = formatWeekStart(getWeekStart(new Date()));
 
 export default function App() {
   const [weekStart, setWeekStart] = useState(currentWeek);

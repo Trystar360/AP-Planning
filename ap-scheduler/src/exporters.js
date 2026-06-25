@@ -8,7 +8,7 @@ function getFacilitators(e) {
   return [];
 }
 
-// Local Date at midnight for a given day index (0 = Monday) of the week.
+// Local Date at midnight for a given day index (0 = Saturday) of the week.
 function dayDate(weekStart, dayIndex) {
   const d = new Date(weekStart + 'T00:00:00');
   d.setDate(d.getDate() + dayIndex);
