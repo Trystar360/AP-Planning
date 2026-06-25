@@ -6,6 +6,7 @@ import CopyModal from './CopyModal';
 import TemplatePanel from './TemplatePanel';
 import SummaryBar from './SummaryBar';
 import Toast from './Toast';
+import PrintView from './PrintView';
 import {
   fetchSchedule, addEntry, updateEntry, deleteEntry,
   fetchStaff, addStaff, deleteStaff, copyWeek,
@@ -377,6 +378,13 @@ export default function App() {
       )}
 
       <Toast toast={toast} onAction={runToastAction} onDismiss={dismissToast} />
+
+      <PrintView
+        entries={entries}
+        staff={staff}
+        weekStart={weekStart}
+        filterStaff={filterStaff}
+      />
     </div>
   );
 }

@@ -1227,19 +1227,229 @@ body {
   .app-main { padding: 8px; }
 }
 
+/* ── Print view (always hidden on screen) ── */
+.print-view { display: none; }
+
 /* ── Print ── */
 @media print {
-  .app-header { position: static; box-shadow: none; border-bottom: 2px solid #000; padding: 8px 0 12px; }
-  .header-actions, .toolbar, .day-tabs, .btn-copy, .toggle-label, .export-wrap { display: none !important; }
-  .app-main { padding: 0; }
-  .timeline { box-shadow: none; border: 1px solid #000; }
-  .tl-corner, .tl-day-head, .tl-gutter { background: none !important; }
-  .entry-chip { break-inside: avoid; box-shadow: none; }
-  .chip-delete { display: none; }
-  .tl-day-col { cursor: default; }
-  .conflict-banner { border: 1px solid #000; color: #000; background: none; }
-  /* Per-person rota: when filtering, only that member's shifts print */
-  .entry-chip.dimmed { display: none !important; }
-  .filter-banner, .summary-bar, .toast { display: none !important; }
-  @page { margin: 1.5cm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4 portrait; margin: 14mm 12mm; }
+
+  /* Hide the interactive app */
+  .app-header,
+  .app-main,
+  .toast { display: none !important; }
+
+  /* Show dedicated print layout */
+  .print-view {
+    display: block;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #111;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+
+  /* ── Document header ── */
+  .pv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .pv-org {
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6b7280;
+    margin-bottom: 3px;
+  }
+  .pv-title {
+    font-size: 20pt;
+    font-weight: 800;
+    margin: 0 0 3px;
+    color: #111;
+    letter-spacing: -0.5px;
+  }
+  .pv-week {
+    font-size: 10pt;
+    color: #374151;
+    font-weight: 500;
+  }
+  .pv-header-right { text-align: right; }
+  .pv-stats-row { display: flex; gap: 18px; justify-content: flex-end; margin-bottom: 6px; }
+  .pv-stat { text-align: center; }
+  .pv-stat-value {
+    display: block;
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1e40af;
+    line-height: 1.1;
+  }
+  .pv-stat-label {
+    display: block;
+    font-size: 6.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-top: 1px;
+  }
+  .pv-print-date { font-size: 7pt; color: #9ca3af; }
+
+  /* ── Divider ── */
+  .pv-divider {
+    border: none;
+    border-top: 2.5px solid #1e40af;
+    margin: 8px 0 10px;
+  }
+
+  /* ── Day sections ── */
+  .pv-day-section {
+    margin-bottom: 12px;
+    break-inside: avoid;
+  }
+  .pv-day-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #d1d5db;
+  }
+  .pv-day-name {
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #111;
+  }
+  .pv-day-date {
+    font-size: 8pt;
+    color: #6b7280;
+  }
+  .pv-day-count {
+    font-size: 7.5pt;
+    color: #9ca3af;
+    margin-left: auto;
+  }
+
+  /* ── Schedule table ── */
+  .pv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+  .pv-col-time    { width: 90px; }
+  .pv-col-activity { width: 105px; }
+  .pv-col-group   { width: 90px; }
+  .pv-col-dur     { width: 52px; }
+  .pv-col-fac     { width: 105px; }
+  .pv-col-notes   { } /* remaining */
+
+  .pv-table thead th {
+    font-size: 6.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #6b7280;
+    background: #f1f5f9;
+    padding: 3px 6px;
+    text-align: left;
+    border-bottom: 1px solid #cbd5e1;
+    border-top: 1px solid #cbd5e1;
+  }
+  .pv-table tbody td {
+    padding: 5px 6px;
+    vertical-align: top;
+    border-bottom: 0.5px solid #e5e7eb;
+  }
+  .pv-alt td { background: #f9fafb; }
+
+  .pv-time-cell { white-space: nowrap; color: #374151; font-variant-numeric: tabular-nums; }
+  .pv-time-start { font-weight: 600; }
+  .pv-time-arrow { color: #9ca3af; font-size: 7pt; }
+  .pv-time-end { color: #6b7280; }
+
+  .pv-act-cell { font-weight: 600; padding-left: 6px; }
+  .pv-dur-cell { white-space: nowrap; text-align: center; }
+  .pv-notes-cell { color: #6b7280; font-style: italic; }
+
+  .pv-cancelled-tag {
+    display: inline-block;
+    font-size: 6pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    padding: 1px 4px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 2px;
+    margin-left: 5px;
+    vertical-align: middle;
+  }
+  .pv-cancelled td {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+  .pv-cancelled .pv-cancelled-tag { text-decoration: none; opacity: 1; }
+
+  /* ── Summary section ── */
+  .pv-summary { margin-top: 6px; }
+  .pv-divider-summary { border-top-color: #d1d5db; border-top-width: 1px; }
+  .pv-summary-heading {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #111;
+    margin: 0 0 8px;
+  }
+  .pv-summary-cols {
+    display: flex;
+    gap: 20px;
+  }
+  .pv-summary-col { flex: 1; }
+  .pv-summary-subhead {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    font-weight: 600;
+    margin: 0 0 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .pv-sum-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+  .pv-sum-table th {
+    font-size: 6.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    background: #f9fafb;
+    padding: 3px 5px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .pv-sum-table td {
+    padding: 3px 5px;
+    border-bottom: 0.5px solid #f3f4f6;
+  }
+  .pv-sum-table td:nth-child(2),
+  .pv-sum-table td:nth-child(3) { text-align: center; }
+
+  /* ── Footer ── */
+  .pv-footer {
+    margin-top: 16px;
+    padding-top: 5px;
+    border-top: 0.5px solid #d1d5db;
+    display: flex;
+    justify-content: space-between;
+    font-size: 7pt;
+    color: #9ca3af;
+  }
+
+  .pv-empty {
+    font-size: 10pt;
+    color: #9ca3af;
+    text-align: center;
+    padding: 28px 0;
+  }
 }
