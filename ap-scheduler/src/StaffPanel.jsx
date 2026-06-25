@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { STAFF_PALETTE } from './constants';
 
 export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -19,8 +25,14 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">Manage Team</h2>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staff-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="modal-title" id="staff-modal-title">Manage Team</h2>
         <ul className="staff-list">
           {staff.map((s, i) => (
             <li key={s.id} className="staff-item">
