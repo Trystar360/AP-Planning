@@ -13,13 +13,16 @@ create table if not exists schedule_entries (
   week_start  date not null,
   activity    text not null,
   day         text not null,
-  time_slot   text not null,
+  start_time  text not null default '09:00',
+  end_time    text not null default '10:00',
+  group_name  text not null default '',
   staff       text not null,
   notes       text not null default '',
   created_at  timestamptz default now()
 );
 
 create index if not exists idx_schedule_week on schedule_entries (week_start);
+create index if not exists idx_schedule_day_time on schedule_entries (day, start_time);
 
 -- Allow the anon key (used by the frontend) full read/write access.
 -- This is appropriate for a private internal team tool with no public access.

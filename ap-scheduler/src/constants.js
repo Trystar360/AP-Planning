@@ -16,11 +16,24 @@ export const ACTIVITIES = [
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+// Row headers for the schedule grid (every hour)
 export const TIME_SLOTS = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
   '13:00', '14:00', '15:00', '16:00', '17:00',
   '18:00', '19:00', '20:00',
 ];
+
+// 15-minute increment options for start/end time dropdowns (8:00 AM – 9:00 PM)
+export const TIME_OPTIONS = (() => {
+  const times = [];
+  for (let h = 8; h <= 21; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 21 && m > 0) break;
+      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+  }
+  return times;
+})();
 
 export const ACTIVITY_COLORS = {
   'Zip Line':       { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },

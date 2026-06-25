@@ -23,3 +23,11 @@ export function addWeeks(weekStart, n) {
   d.setDate(d.getDate() + n * 7);
   return formatWeekStart(d);
 }
+
+export function formatTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+}

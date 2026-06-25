@@ -35,7 +35,7 @@ export default function App() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  const handleAdd = (day, time_slot) => setModal({ mode: 'add', day, time_slot });
+  const handleAdd = (day, start_time) => setModal({ mode: 'add', day, start_time });
   const handleEdit = (entry) => setModal({ mode: 'edit', entry });
 
   const handleSave = async (form) => {
@@ -155,7 +155,7 @@ export default function App() {
       {modal && (
         <EntryModal
           mode={modal.mode}
-          entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, time_slot: modal.time_slot }}
+          entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, start_time: modal.start_time }}
           staff={staff}
           onSave={handleSave}
           onClose={() => setModal(null)}

@@ -58,7 +58,7 @@ async function sbDelete(path) {
 
 const sb = {
   fetchSchedule: (weekStart) =>
-    sbGet(`schedule_entries?week_start=eq.${weekStart}&order=day,time_slot`),
+    sbGet(`schedule_entries?week_start=eq.${weekStart}&order=day,start_time`),
 
   addEntry: (entry) => sbPost('schedule_entries', entry),
 
@@ -86,7 +86,7 @@ const sb = {
       sbGet(`schedule_entries?week_start=eq.${fromWeek}`),
       sbGet(`schedule_entries?week_start=eq.${toWeek}`),
     ]);
-    const key = (e) => `${e.activity}|${e.day}|${e.time_slot}|${e.staff}`;
+    const key = (e) => `${e.activity}|${e.day}|${e.start_time || e.time_slot}|${e.staff}`;
     const existing = new Set(target.map(key));
     // Strip id and created_at so Supabase generates fresh ones
     const toInsert = source
@@ -133,7 +133,7 @@ const ls = {
 
   addEntry(entry) {
     const entries = getEntryStore();
-    const record = { id: uuid(), notes: '', ...entry };
+    const record = { id: uuid(), notes: '', group_name: '', ...entry };
     entries.push(record);
     lsWrite(SCHEDULE_KEY, entries);
     return resolve(record);
@@ -173,7 +173,7 @@ const ls = {
     const all = getEntryStore();
     const source = all.filter((e) => e.week_start === fromWeek);
     const target = all.filter((e) => e.week_start === toWeek);
-    const key = (e) => `${e.activity}|${e.day}|${e.time_slot}|${e.staff}`;
+    const key = (e) => `${e.activity}|${e.day}|${e.start_time || e.time_slot}|${e.staff}`;
     const existing = new Set(target.map(key));
     const added = source
       .filter((e) => !existing.has(key(e)))
