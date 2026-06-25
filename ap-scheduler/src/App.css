@@ -54,6 +54,19 @@ body {
   gap: 8px;
 }
 
+.shared-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
+  letter-spacing: 0.02em;
+}
+
 .btn-icon {
   background: none;
   border: 1px solid var(--border);
