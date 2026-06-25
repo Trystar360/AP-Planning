@@ -48,6 +48,9 @@ jobs:
 
   deploy:
     needs: build
+    # GitHub Pages only deploys from main; on feature branches we still run the
+    # build above to validate the PR, but skip the deploy to avoid a failure.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
