@@ -18,14 +18,12 @@ function entryEnd(e) {
   return toMinutes(e.end_time || e.start_time || e.time_slot || '00:00');
 }
 
-// Normalise facilitators — handles old `staff` string field for backward compat
 function getFacilitators(e) {
   if (Array.isArray(e.facilitators)) return e.facilitators;
   if (e.staff) return [e.staff];
   return [];
 }
 
-// Returns a Set of entry ids where a facilitator is double-booked on the same day.
 function findConflicts(entries) {
   const conflicts = new Set();
   const groups = {};
@@ -56,47 +54,54 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
   });
 
   const conflicts = findConflicts(entries);
+  const todayName = isCurrentWeek ? todayDayName() : null;
 
-  // Build lookup: day -> time_slot -> { entry, isContinuation }[]
-  // An entry appears in every TIME_SLOT row it covers.
-  const grid = {};
-  DAYS.forEach((d) => {
-    grid[d] = {};
-    TIME_SLOTS.forEach((t) => { grid[d][t] = []; });
-  });
-
+  // Determine visible slots
+  const occupiedSlots = new Set();
   entries.forEach((e) => {
     const startMin = entryStart(e);
     const endMin = entryEnd(e);
     TIME_SLOTS.forEach((slot) => {
-      const slotMin = toMinutes(slot);
-      const nextSlotMin = slotMin + 60;
-      if (slotMin < endMin && nextSlotMin > startMin) {
-        if (grid[e.day]?.[slot]) {
-          grid[e.day][slot].push({ entry: e, isContinuation: slotMin > startMin });
-        }
-      }
+      const sm = toMinutes(slot);
+      if (sm < endMin && sm + 60 > startMin) occupiedSlots.add(slot);
     });
   });
+  const visibleSlots = collapseEmpty ? TIME_SLOTS.filter((t) => occupiedSlots.has(t)) : TIME_SLOTS;
 
-  // Sort within each slot by start time (first-row chips first)
-  DAYS.forEach((d) => {
-    TIME_SLOTS.forEach((t) => {
-      grid[d][t].sort((a, b) => entryStart(a.entry) - entryStart(b.entry));
+  // Build chip placement: each entry sits in ONE cell, spanning N rows.
+  // chipMap["day|slot"] = [{ entry, span }]
+  // consumed = set of "day|slot" cells skipped because a spanning entry covers them.
+  const chipMap = {};
+  const consumed = new Set();
+
+  [...entries]
+    .sort((a, b) => entryStart(a) - entryStart(b))
+    .forEach((e) => {
+      if (!DAYS.includes(e.day)) return;
+      const startMin = entryStart(e);
+      const endMin = entryEnd(e);
+      const covered = visibleSlots.filter((s) => {
+        const sm = toMinutes(s);
+        return sm < endMin && sm + 60 > startMin;
+      });
+      if (!covered.length) return;
+
+      const key = `${e.day}|${covered[0]}`;
+      if (!chipMap[key]) chipMap[key] = [];
+      const subsequent = covered.slice(1);
+      const canSpan = subsequent.every((s) => !consumed.has(`${e.day}|${s}`));
+      const span = canSpan ? covered.length : 1;
+      chipMap[key].push({ entry: e, span });
+      if (canSpan) subsequent.forEach((s) => consumed.add(`${e.day}|${s}`));
     });
-  });
 
-  const todayName = isCurrentWeek ? todayDayName() : null;
+  const dayEntryCount = (day) => {
+    const ids = new Set();
+    visibleSlots.forEach((t) => (chipMap[`${day}|${t}`] || []).forEach(({ entry }) => ids.add(entry.id)));
+    return ids.size;
+  };
 
-  const visibleSlots = collapseEmpty
-    ? TIME_SLOTS.filter((t) => DAYS.some((d) => grid[d][t].length > 0))
-    : TIME_SLOTS;
-
-  const dayEntryCount = (day) => new Set(
-    TIME_SLOTS.flatMap((t) => grid[day][t].map((r) => r.entry.id))
-  ).size;
-
-  const renderChip = ({ entry: e, isContinuation }) => {
+  const renderChip = (e, fill) => {
     const colors = ACTIVITY_COLORS[e.activity] || {};
     const facilitators = getFacilitators(e);
     const timeRange = e.start_time && e.end_time
@@ -108,8 +113,8 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
 
     return (
       <div
-        key={`${e.id}-${isContinuation ? 'cont' : 'start'}`}
-        className={`entry-chip${isContinuation ? ' chip-continuation' : ''}${isConflict ? ' conflict' : ''}${isDimmed ? ' dimmed' : ''}`}
+        key={e.id}
+        className={`entry-chip${fill ? ' chip-fill' : ''}${isConflict ? ' conflict' : ''}${isDimmed ? ' dimmed' : ''}`}
         style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}
         role="button"
         tabIndex={0}
@@ -119,24 +124,14 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); onEdit(e); }
         }}
       >
-        {!isContinuation && (
-          <>
-            <span className="chip-activity">
-              {isConflict && <span className="chip-warning" title="A facilitator is double-booked at this time">⚠</span>}
-              {e.activity}
-            </span>
-            {e.group_name && <span className="chip-group">{e.group_name}</span>}
-            {timeRange && (
-              <span className="chip-time">
-                {timeRange}{dur && <span className="chip-duration"> · {dur}</span>}
-              </span>
-            )}
-          </>
-        )}
-        {isContinuation && (
-          <span className="chip-activity chip-cont-label">
-            {isConflict && <span className="chip-warning" title="A facilitator is double-booked at this time">⚠</span>}
-            ↕ {e.activity}
+        <span className="chip-activity">
+          {isConflict && <span className="chip-warning" title="A facilitator is double-booked at this time">⚠</span>}
+          {e.activity}
+        </span>
+        {e.group_name && <span className="chip-group">{e.group_name}</span>}
+        {timeRange && (
+          <span className="chip-time">
+            {timeRange}{dur && <span className="chip-duration"> · {dur}</span>}
           </span>
         )}
         <span className="chip-staff">
@@ -149,15 +144,13 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
               ))
             : <em>Unassigned</em>}
         </span>
-        {!isContinuation && e.notes && <span className="chip-notes">{e.notes}</span>}
-        {!isContinuation && (
-          <button
-            className="chip-delete"
-            onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
-            title="Remove"
-            aria-label={`Remove ${e.activity}`}
-          >×</button>
-        )}
+        {e.notes && <span className="chip-notes">{e.notes}</span>}
+        <button
+          className="chip-delete"
+          onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
+          title="Remove"
+          aria-label={`Remove ${e.activity}`}
+        >×</button>
       </div>
     );
   };
@@ -170,7 +163,6 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
         </div>
       )}
 
-      {/* Mobile day tabs */}
       <div className="day-tabs">
         {DAYS.map((d) => {
           const count = dayEntryCount(d);
@@ -205,24 +197,39 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           </thead>
           <tbody>
             {visibleSlots.map((slot) => {
-              const hasAny = DAYS.some((d) => grid[d][slot].length > 0);
+              const hasAny = DAYS.some((d) => {
+                const k = `${d}|${slot}`;
+                return !consumed.has(k) && (chipMap[k]?.length || 0) > 0;
+              });
               return (
                 <tr key={slot} className={hasAny ? 'row-active' : 'row-empty'}>
                   <td className="time-cell">{formatTime(slot)}</td>
-                  {DAYS.map((d) => (
-                    <td
-                      key={d}
-                      className={`day-cell${d === todayName ? ' today-col' : ''}${d === mobileDay ? ' mobile-visible' : ' mobile-hidden'}`}
-                      onClick={() => onAdd(d, slot)}
-                    >
-                      {grid[d][slot].map(renderChip)}
-                      <button
-                        className="add-cell"
-                        aria-label={`Add activity on ${d} at ${formatTime(slot)}`}
-                        onClick={(ev) => { ev.stopPropagation(); onAdd(d, slot); }}
-                      >+</button>
-                    </td>
-                  ))}
+                  {DAYS.map((d) => {
+                    const cellKey = `${d}|${slot}`;
+                    if (consumed.has(cellKey)) return null;
+
+                    const chips = chipMap[cellKey] || [];
+                    const rowSpan = chips.length ? Math.max(...chips.map((c) => c.span)) : 1;
+                    const singleFill = chips.length === 1 && rowSpan > 1;
+
+                    return (
+                      <td
+                        key={d}
+                        rowSpan={rowSpan > 1 ? rowSpan : undefined}
+                        className={`day-cell${rowSpan > 1 ? ' spanning-cell' : ''}${d === todayName ? ' today-col' : ''}${d === mobileDay ? ' mobile-visible' : ' mobile-hidden'}`}
+                        onClick={() => onAdd(d, slot)}
+                      >
+                        <div className="cell-inner">
+                          {chips.map(({ entry: e, span }) => renderChip(e, singleFill && span === rowSpan))}
+                          <button
+                            className="add-cell"
+                            aria-label={`Add activity on ${d} at ${formatTime(slot)}`}
+                            onClick={(ev) => { ev.stopPropagation(); onAdd(d, slot); }}
+                          >+</button>
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}

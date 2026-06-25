@@ -331,9 +331,33 @@ th.today-col {
 }
 
 .day-cell {
-  padding: 3px;
+  padding: 0;
   min-height: 44px;
   cursor: pointer;
+  position: relative;
+}
+
+.cell-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px;
+  min-height: 44px;
+}
+
+/* Spanning cells: height: 1px tricks children into inheriting the full rowspan height */
+.day-cell.spanning-cell {
+  height: 1px;
+  padding: 0;
+}
+.day-cell.spanning-cell > .cell-inner {
+  height: 100%;
+}
+
+/* A single chip that should fill the entire spanning cell */
+.entry-chip.chip-fill {
+  flex: 1;
+  margin-bottom: 0;
 }
 .day-cell:hover { background: #eff6ff; }
 .day-cell.today-col { background: #f8fbff; }
@@ -701,14 +725,6 @@ th.today-col {
 
 .entry-chip.dimmed { opacity: 0.16; }
 .entry-chip.dimmed:hover { opacity: 0.4; }
-
-/* Continuation chips (entry spanning into subsequent hour rows) */
-.entry-chip.chip-continuation {
-  opacity: 0.72;
-  border-style: dashed;
-  padding-right: 6px; /* no delete button space needed */
-}
-.chip-cont-label { font-style: italic; }
 
 /* Multiple facilitators in a chip */
 .chip-staff { flex-wrap: wrap; }
