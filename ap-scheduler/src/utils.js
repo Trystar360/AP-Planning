@@ -38,12 +38,17 @@ export function toMinutes(t) {
   return h * 60 + (m || 0);
 }
 
-export function durationLabel(start, end) {
-  if (!start || !end) return '';
-  const mins = toMinutes(end) - toMinutes(start);
-  if (mins <= 0) return '';
+export function formatMinutes(mins) {
+  if (!mins || mins <= 0) return '0m';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h && m) return `${h}h ${m}m`;
   return h ? `${h}h` : `${m}m`;
+}
+
+export function durationLabel(start, end) {
+  if (!start || !end) return '';
+  const mins = toMinutes(end) - toMinutes(start);
+  if (mins <= 0) return '';
+  return formatMinutes(mins);
 }
