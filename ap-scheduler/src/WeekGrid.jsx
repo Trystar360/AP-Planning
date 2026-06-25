@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DAYS, TIME_SLOTS, ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
-import { formatTime } from './utils';
+import { formatTime, toMinutes, durationLabel } from './utils';
 
 function todayDayName() {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long' });
@@ -20,13 +20,46 @@ function slotForEntry(e) {
   return e.time_slot || TIME_SLOTS[0];
 }
 
+function entryStart(e) {
+  return toMinutes(e.start_time || e.time_slot || '00:00');
+}
+function entryEnd(e) {
+  return toMinutes(e.end_time || e.start_time || e.time_slot || '00:00');
+}
+
+// Returns a Set of entry ids where the same staff member is booked for
+// overlapping times on the same day (i.e. can't be in two places at once).
+function findConflicts(entries) {
+  const conflicts = new Set();
+  const groups = {};
+  entries.forEach((e) => {
+    if (!e.staff) return;
+    const k = `${e.staff}|${e.day}`;
+    (groups[k] = groups[k] || []).push(e);
+  });
+  Object.values(groups).forEach((list) => {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j];
+        if (entryStart(a) < entryEnd(b) && entryStart(b) < entryEnd(a)) {
+          conflicts.add(a.id);
+          conflicts.add(b.id);
+        }
+      }
+    }
+  });
+  return conflicts;
+}
+
 export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, collapseEmpty }) {
   const [mobileDay, setMobileDay] = useState(() => {
     const today = todayDayName();
     return DAYS.includes(today) ? today : DAYS[0];
   });
 
-  // Build lookup: day -> time_slot -> entries[]
+  const conflicts = findConflicts(entries);
+
+  // Build lookup: day -> time_slot -> entries[] (sorted by start time)
   const grid = {};
   DAYS.forEach((d) => {
     grid[d] = {};
@@ -35,6 +68,9 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
   entries.forEach((e) => {
     const slot = slotForEntry(e);
     if (grid[e.day]?.[slot]) grid[e.day][slot].push(e);
+  });
+  DAYS.forEach((d) => {
+    TIME_SLOTS.forEach((t) => { grid[d][t].sort((a, b) => entryStart(a) - entryStart(b)); });
   });
 
   const todayName = isCurrentWeek ? todayDayName() : null;
@@ -51,26 +87,41 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
     const timeRange = e.start_time && e.end_time
       ? `${formatTime(e.start_time)} – ${formatTime(e.end_time)}`
       : e.time_slot ? formatTime(e.time_slot) : '';
+    const dur = durationLabel(e.start_time, e.end_time);
+    const isConflict = conflicts.has(e.id);
     return (
       <div
         key={e.id}
-        className="entry-chip"
+        className={`entry-chip${isConflict ? ' conflict' : ''}`}
         style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Edit ${e.activity}${e.group_name ? `, ${e.group_name}` : ''}, ${timeRange}, ${e.staff}`}
         onClick={(ev) => { ev.stopPropagation(); onEdit(e); }}
+        onKeyDown={(ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); onEdit(e); }
+        }}
       >
-        <span className="chip-activity">{e.activity}</span>
+        <span className="chip-activity">
+          {isConflict && <span className="chip-warning" title={`${e.staff} is double-booked at this time`}>⚠</span>}
+          {e.activity}
+        </span>
         {e.group_name && <span className="chip-group">{e.group_name}</span>}
-        {timeRange && <span className="chip-time">{timeRange}</span>}
+        {timeRange && (
+          <span className="chip-time">
+            {timeRange}{dur && <span className="chip-duration"> · {dur}</span>}
+          </span>
+        )}
         <span className="chip-staff">
           <span className="staff-dot" style={{ background: dot }} />
-          {e.staff}
+          {e.staff || <em>Unassigned</em>}
         </span>
         {e.notes && <span className="chip-notes">{e.notes}</span>}
         <button
           className="chip-delete"
           onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
           title="Remove"
-          aria-label="Remove entry"
+          aria-label={`Remove ${e.activity}`}
         >×</button>
       </div>
     );
@@ -78,6 +129,12 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
 
   return (
     <div className="week-grid-outer">
+      {conflicts.size > 0 && (
+        <div className="conflict-banner" role="status">
+          ⚠ {conflicts.size} {conflicts.size === 1 ? 'activity has' : 'activities have'} a staff double-booking this week — check the highlighted entries.
+        </div>
+      )}
+
       {/* Mobile day tabs */}
       <div className="day-tabs">
         {DAYS.map((d) => {
@@ -124,7 +181,11 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
                       onClick={() => onAdd(d, slot)}
                     >
                       {grid[d][slot].map(renderChip)}
-                      {grid[d][slot].length === 0 && <span className="add-hint">+</span>}
+                      <button
+                        className="add-cell"
+                        aria-label={`Add activity on ${d} at ${formatTime(slot)}`}
+                        onClick={(ev) => { ev.stopPropagation(); onAdd(d, slot); }}
+                      >+</button>
                     </td>
                   ))}
                 </tr>
@@ -133,7 +194,7 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
             {visibleSlots.length === 0 && (
               <tr>
                 <td colSpan={8} className="empty-week-msg">
-                  No activities scheduled yet — click any time slot to add one.
+                  No activities scheduled yet — tap any time slot to add one.
                 </td>
               </tr>
             )}

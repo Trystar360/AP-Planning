@@ -47,8 +47,14 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">{mode === 'edit' ? 'Edit Entry' : 'Add Entry'}</h2>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="entry-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="modal-title" id="entry-modal-title">{mode === 'edit' ? 'Edit Entry' : 'Add Entry'}</h2>
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
             Activity
