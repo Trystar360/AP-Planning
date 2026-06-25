@@ -1,16 +1,44 @@
-# React + Vite
+# AP Activity Scheduler
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A central place for the team to track which AP activities are scheduled when,
+and who is running them. Each week is shown on its own clear grid (Mon–Sun,
+hourly slots) with colour-coded activities.
 
-Currently, two official plugins are available:
+**Activities:** Zip Line, Mini Zip Line, Climbing Wall, Climbing Tower,
+Laser Tag, Power Swing, Sky Trail.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Hosted version (GitHub Pages)
 
-## React Compiler
+The app is deployed automatically via GitHub Actions
+(`.github/workflows/deploy.yml`) to GitHub Pages on every push to the working
+branch. Once Pages is enabled (Settings → Pages → Source: **GitHub Actions**),
+it's available at:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+> https://trystar360.github.io/AP-Planning/
 
-## Expanding the Oxlint configuration
+> **Note — for testing:** the hosted build stores data in each browser's
+> `localStorage`, so it's perfect for trying out the layout, but data is **not
+> shared** between people/devices yet. To make the schedule truly shared across
+> the team, swap `src/api.js` back to a real backend (the matching API lives in
+> `server.js`) hosted somewhere that can run Node, or use a hosted database.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Run locally
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+```
+
+The local dev build uses the same browser `localStorage`, so no backend is
+needed to try it.
+
+### Optional: run with the shared SQLite backend
+
+```bash
+npm install
+npm run build
+node server.js   # serves the API + built UI on http://localhost:3001
+```
+
+To use the backend instead of `localStorage`, point `src/api.js` at the
+`/api` endpoints in `server.js`.

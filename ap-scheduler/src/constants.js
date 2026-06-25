@@ -25,5 +25,3 @@ export const ACTIVITY_COLORS = {
   'Power Swing':    { bg: '#fef3c7', border: '#f59e0b', text: '#78350f' },
   'Sky Trail':      { bg: '#ede9fe', border: '#8b5cf6', text: '#4c1d95' },
 };
-
-export const API = 'http://localhost:3001/api';
