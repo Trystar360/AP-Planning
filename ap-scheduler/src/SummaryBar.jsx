@@ -1,6 +1,12 @@
 import { ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
 import { toMinutes, formatMinutes } from './utils';
 
+function getFacilitators(e) {
+  if (Array.isArray(e.facilitators)) return e.facilitators;
+  if (e.staff) return [e.staff];
+  return [];
+}
+
 export default function SummaryBar({ entries, staff }) {
   if (entries.length === 0) return null;
 
@@ -8,14 +14,17 @@ export default function SummaryBar({ entries, staff }) {
   const byActivity = {};
   entries.forEach((e) => { byActivity[e.activity] = (byActivity[e.activity] || 0) + 1; });
 
-  // Per-staff counts + total scheduled minutes
-  const byStaff = {};
+  // Per-facilitator counts + total scheduled minutes
+  const byFacilitator = {};
   entries.forEach((e) => {
-    const name = e.staff || 'Unassigned';
+    const names = getFacilitators(e);
     const mins = Math.max(0, toMinutes(e.end_time || e.start_time) - toMinutes(e.start_time));
-    if (!byStaff[name]) byStaff[name] = { count: 0, mins: 0 };
-    byStaff[name].count += 1;
-    byStaff[name].mins += mins;
+    const targets = names.length > 0 ? names : ['Unassigned'];
+    targets.forEach((name) => {
+      if (!byFacilitator[name]) byFacilitator[name] = { count: 0, mins: 0 };
+      byFacilitator[name].count += 1;
+      byFacilitator[name].mins += mins;
+    });
   });
 
   const staffColor = (name) => {
@@ -24,8 +33,10 @@ export default function SummaryBar({ entries, staff }) {
   };
 
   const activities = Object.entries(byActivity).sort((a, b) => b[1] - a[1]);
-  const people = Object.entries(byStaff).sort((a, b) => b[1].mins - a[1].mins);
-  const totalHours = formatMinutes(people.reduce((n, [, v]) => n + v.mins, 0));
+  const people = Object.entries(byFacilitator).sort((a, b) => b[1].mins - a[1].mins);
+  const totalHours = formatMinutes(entries.reduce((n, e) => {
+    return n + Math.max(0, toMinutes(e.end_time || e.start_time) - toMinutes(e.start_time));
+  }, 0));
 
   return (
     <div className="summary-bar">
@@ -43,7 +54,7 @@ export default function SummaryBar({ entries, staff }) {
         </div>
       </div>
       <div className="summary-group">
-        <span className="summary-label">By team member</span>
+        <span className="summary-label">By facilitator</span>
         <div className="summary-pills">
           {people.map(([name, v]) => (
             <span key={name} className="summary-pill summary-staff">

@@ -32,7 +32,7 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
         aria-labelledby="staff-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="modal-title" id="staff-modal-title">Manage Team</h2>
+        <h2 className="modal-title" id="staff-modal-title">Manage Facilitators</h2>
         <ul className="staff-list">
           {staff.map((s, i) => (
             <li key={s.id} className="staff-item">
@@ -49,7 +49,7 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="New team member name"
+            placeholder="New facilitator name"
             autoComplete="off"
           />
           <button type="submit" className="btn-primary">Add</button>

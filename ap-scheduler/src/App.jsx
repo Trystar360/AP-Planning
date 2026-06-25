@@ -118,7 +118,7 @@ export default function App() {
     if (filterStaff && member && member.name === filterStaff) setFilterStaff('');
     await deleteStaff(id);
     if (!member) return;
-    showToast(`Removed ${member.name}`, {
+    showToast(`Removed facilitator ${member.name}`, {
       actionLabel: 'Undo',
       onAction: async () => {
         try {
@@ -175,6 +175,7 @@ export default function App() {
   const isCurrentWeek = weekStart === currentWeek;
   const printTitle = filterStaff ? `Print ${filterStaff}'s rota` : 'Print schedule';
 
+
   return (
     <div className="app">
       <header className="app-header">
@@ -183,7 +184,7 @@ export default function App() {
           <div className="header-actions">
             <button className="btn-icon" title={printTitle} onClick={() => window.print()}>🖨</button>
             <button className="btn-secondary" onClick={() => setShowTemplates(true)}>Templates</button>
-            <button className="btn-secondary" onClick={() => setShowStaff(true)}>Team</button>
+            <button className="btn-secondary" onClick={() => setShowStaff(true)}>Facilitators</button>
           </div>
         </div>
 
@@ -213,9 +214,9 @@ export default function App() {
               className="staff-filter"
               value={filterStaff}
               onChange={(e) => setFilterStaff(e.target.value)}
-              title="Show only one team member's shifts"
+              title="Show only one facilitator's shifts"
             >
-              <option value="">All team</option>
+              <option value="">All facilitators</option>
               {staff.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
             <label className="toggle-label">
@@ -240,7 +241,7 @@ export default function App() {
         {error && <div className="error-banner">{error}</div>}
         {filterStaff && (
           <div className="filter-banner">
-            Showing <strong>{filterStaff}</strong>'s shifts.
+            Showing <strong>{filterStaff}</strong>'s activities.
             <button className="btn-ghost" onClick={() => setFilterStaff('')}>Show all</button>
           </div>
         )}

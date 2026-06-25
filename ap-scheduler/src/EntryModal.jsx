@@ -8,6 +8,12 @@ function addOneHour(t) {
   return `${String(nh).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+function normFacilitators(entry) {
+  if (Array.isArray(entry?.facilitators)) return entry.facilitators;
+  if (entry?.staff) return [entry.staff]; // backward-compat
+  return [];
+}
+
 export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
@@ -16,7 +22,7 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
     start_time: defaultStart,
     end_time: entry?.end_time || addOneHour(defaultStart),
     group_name: entry?.group_name || '',
-    staff: entry?.staff || (staff[0]?.name ?? ''),
+    facilitators: normFacilitators(entry),
     notes: entry?.notes || '',
   });
 
@@ -35,6 +41,18 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
       start_time: start,
       end_time: f.end_time <= start ? addOneHour(start) : f.end_time,
     }));
+  };
+
+  const toggleFacilitator = (name) => {
+    setForm((f) => {
+      const already = f.facilitators.includes(name);
+      return {
+        ...f,
+        facilitators: already
+          ? f.facilitators.filter((n) => n !== name)
+          : [...f.facilitators, name],
+      };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -95,12 +113,22 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
               </select>
             </label>
           </div>
-          <label>
-            Staff Member
-            <select value={form.staff} onChange={set('staff')}>
-              {staff.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
-          </label>
+          <fieldset className="facilitator-fieldset">
+            <legend>Facilitator(s)</legend>
+            {staff.length === 0 && <p className="facilitator-empty">No facilitators added yet — use the Facilitators panel.</p>}
+            <div className="facilitator-checks">
+              {staff.map((s) => (
+                <label key={s.id} className="facilitator-check-label">
+                  <input
+                    type="checkbox"
+                    checked={form.facilitators.includes(s.name)}
+                    onChange={() => toggleFacilitator(s.name)}
+                  />
+                  {s.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label>
             Notes (optional)
             <input

@@ -702,6 +702,63 @@ th.today-col {
 .entry-chip.dimmed { opacity: 0.16; }
 .entry-chip.dimmed:hover { opacity: 0.4; }
 
+/* Continuation chips (entry spanning into subsequent hour rows) */
+.entry-chip.chip-continuation {
+  opacity: 0.72;
+  border-style: dashed;
+  padding-right: 6px; /* no delete button space needed */
+}
+.chip-cont-label { font-style: italic; }
+
+/* Multiple facilitators in a chip */
+.chip-staff { flex-wrap: wrap; }
+.chip-facilitator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Facilitator checkboxes in entry modal */
+.facilitator-fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px 8px;
+  margin-top: 2px;
+}
+.facilitator-fieldset legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+.facilitator-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+.modal-form .facilitator-check-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.facilitator-check-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.facilitator-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 6px;
+}
+
 /* ── Summary bar ── */
 .summary-bar {
   background: var(--surface);
