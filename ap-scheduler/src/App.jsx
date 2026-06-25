@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import WeekGrid from './WeekGrid';
 import EntryModal from './EntryModal';
 import StaffPanel from './StaffPanel';
-import { fetchSchedule, addEntry, updateEntry, deleteEntry, fetchStaff, addStaff, deleteStaff, copyWeek } from './api';
+import { fetchSchedule, addEntry, updateEntry, deleteEntry, fetchStaff, addStaff, deleteStaff, copyWeek, isShared } from './api';
 import { getMonday, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
 import { ACTIVITY_COLORS, ACTIVITIES } from './constants';
 import './App.css';
@@ -35,7 +35,7 @@ export default function App() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  const handleAdd = (day, time_slot) => setModal({ mode: 'add', day, time_slot });
+  const handleAdd = (day, start_time) => setModal({ mode: 'add', day, start_time });
   const handleEdit = (entry) => setModal({ mode: 'edit', entry });
 
   const handleSave = async (form) => {
@@ -91,7 +91,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-top">
-          <h1>AP Scheduler</h1>
+          <h1>AP Scheduler {isShared && <span className="shared-badge">● Live</span>}</h1>
           <div className="header-actions">
             <button className="btn-icon" title="Print schedule" onClick={() => window.print()}>🖨</button>
             <button className="btn-secondary" onClick={() => setShowStaff(true)}>Team</button>
@@ -155,7 +155,7 @@ export default function App() {
       {modal && (
         <EntryModal
           mode={modal.mode}
-          entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, time_slot: modal.time_slot }}
+          entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, start_time: modal.start_time }}
           staff={staff}
           onSave={handleSave}
           onClose={() => setModal(null)}

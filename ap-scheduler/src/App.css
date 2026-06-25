@@ -54,6 +54,19 @@ body {
   gap: 8px;
 }
 
+.shared-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
+  letter-spacing: 0.02em;
+}
+
 .btn-icon {
   background: none;
   border: 1px solid var(--border);
@@ -363,6 +376,18 @@ th.today-col {
 
 .chip-activity { font-weight: 700; font-size: 0.76rem; }
 
+.chip-group {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.chip-time {
+  font-size: 0.68rem;
+  opacity: 0.75;
+  font-style: normal;
+}
+
 .chip-staff {
   display: flex;
   align-items: center;
@@ -528,6 +553,12 @@ th.today-col {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
   border-color: var(--primary);
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .modal-actions {

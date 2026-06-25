@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DAYS, TIME_SLOTS, ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
+import { formatTime } from './utils';
 
 function todayDayName() {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long' });
@@ -8,6 +9,15 @@ function todayDayName() {
 function staffColor(name, staff) {
   const idx = staff.findIndex((s) => s.name === name);
   return STAFF_PALETTE[idx >= 0 ? idx % STAFF_PALETTE.length : 0];
+}
+
+// Map an entry's start_time to the nearest hourly grid row
+function slotForEntry(e) {
+  if (e.start_time) {
+    const hour = `${e.start_time.slice(0, 2)}:00`;
+    return TIME_SLOTS.includes(hour) ? hour : TIME_SLOTS[TIME_SLOTS.length - 1];
+  }
+  return e.time_slot || TIME_SLOTS[0];
 }
 
 export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, collapseEmpty }) {
@@ -23,7 +33,8 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
     TIME_SLOTS.forEach((t) => { grid[d][t] = []; });
   });
   entries.forEach((e) => {
-    if (grid[e.day]?.[e.time_slot]) grid[e.day][e.time_slot].push(e);
+    const slot = slotForEntry(e);
+    if (grid[e.day]?.[slot]) grid[e.day][slot].push(e);
   });
 
   const todayName = isCurrentWeek ? todayDayName() : null;
@@ -37,6 +48,9 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
   const renderChip = (e) => {
     const colors = ACTIVITY_COLORS[e.activity] || {};
     const dot = staffColor(e.staff, staff);
+    const timeRange = e.start_time && e.end_time
+      ? `${formatTime(e.start_time)} – ${formatTime(e.end_time)}`
+      : e.time_slot ? formatTime(e.time_slot) : '';
     return (
       <div
         key={e.id}
@@ -45,6 +59,8 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
         onClick={(ev) => { ev.stopPropagation(); onEdit(e); }}
       >
         <span className="chip-activity">{e.activity}</span>
+        {e.group_name && <span className="chip-group">{e.group_name}</span>}
+        {timeRange && <span className="chip-time">{timeRange}</span>}
         <span className="chip-staff">
           <span className="staff-dot" style={{ background: dot }} />
           {e.staff}
@@ -59,17 +75,6 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
       </div>
     );
   };
-
-  const renderCell = (day, slot) => (
-    <td
-      key={day}
-      className={`day-cell${day === todayName ? ' today-col' : ''}`}
-      onClick={() => onAdd(day, slot)}
-    >
-      {grid[day][slot].map(renderChip)}
-      {grid[day][slot].length === 0 && <span className="add-hint">+</span>}
-    </td>
-  );
 
   return (
     <div className="week-grid-outer">
@@ -95,7 +100,6 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           <thead>
             <tr>
               <th className="time-col">Time</th>
-              {/* Desktop: all days. Mobile: selected day only (via CSS). */}
               {DAYS.map((d) => (
                 <th
                   key={d}
@@ -112,7 +116,7 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
               const hasAny = DAYS.some((d) => grid[d][slot].length > 0);
               return (
                 <tr key={slot} className={hasAny ? 'row-active' : 'row-empty'}>
-                  <td className="time-cell">{slot}</td>
+                  <td className="time-cell">{formatTime(slot)}</td>
                   {DAYS.map((d) => (
                     <td
                       key={d}
