@@ -12,12 +12,12 @@ import {
   fetchTemplates, saveTemplate, deleteTemplate, applyTemplate,
   isShared,
 } from './api';
-import { getMonday, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
+import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
 import { ACTIVITY_COLORS } from './constants';
 import { exportICS, exportCSV } from './exporters';
 import './App.css';
 
-const currentWeek = formatWeekStart(getMonday(new Date()));
+const currentWeek = formatWeekStart(getWeekStart(new Date()));
 
 export default function App() {
   const [weekStart, setWeekStart] = useState(currentWeek);
@@ -34,6 +34,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [fullDay, setFullDay] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef();
 
@@ -207,26 +208,51 @@ export default function App() {
     return () => window.removeEventListener('click', close);
   }, [exportOpen]);
 
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const close = () => { setMenuOpen(false); setExportOpen(false); };
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [menuOpen]);
+
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-top">
           <h1>AP Scheduler {isShared && <span className="shared-badge">● Live</span>}</h1>
-          <div className="header-actions">
-            <button className="btn-icon" title={printTitle} onClick={() => window.print()}>🖨</button>
-            <div className="export-wrap" onClick={(e) => e.stopPropagation()}>
-              <button className="btn-secondary" onClick={() => setExportOpen((v) => !v)} aria-haspopup="true" aria-expanded={exportOpen}>
-                Export ▾
+          <div className="header-actions" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="btn-icon menu-toggle"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
+              onClick={() => { setMenuOpen((v) => !v); setExportOpen(false); }}
+            >
+              <span className="menu-toggle-icon">{menuOpen ? '✕' : '☰'}</span>
+              <span className="menu-toggle-text">Menu</span>
+            </button>
+            <div className={`header-action-menu ${menuOpen ? 'open' : ''}`}>
+              <button
+                className="btn-icon action-print"
+                title={printTitle}
+                onClick={() => { setMenuOpen(false); window.print(); }}
+              >
+                🖨 <span className="action-text">Print</span>
               </button>
-              {exportOpen && (
-                <div className="export-menu" role="menu">
-                  <button role="menuitem" onClick={() => handleExport('ics')}>📅 Add to calendar (.ics)</button>
-                  <button role="menuitem" onClick={() => handleExport('csv')}>📄 Download CSV</button>
-                </div>
-              )}
+              <div className="export-wrap">
+                <button className="btn-secondary" onClick={() => setExportOpen((v) => !v)} aria-haspopup="true" aria-expanded={exportOpen}>
+                  Export ▾
+                </button>
+                {exportOpen && (
+                  <div className="export-menu" role="menu">
+                    <button role="menuitem" onClick={() => { setMenuOpen(false); handleExport('ics'); }}>📅 Add to calendar (.ics)</button>
+                    <button role="menuitem" onClick={() => { setMenuOpen(false); handleExport('csv'); }}>📄 Download CSV</button>
+                  </div>
+                )}
+              </div>
+              <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowTemplates(true); }}>Templates</button>
+              <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowStaff(true); }}>Facilitators</button>
             </div>
-            <button className="btn-secondary" onClick={() => setShowTemplates(true)}>Templates</button>
-            <button className="btn-secondary" onClick={() => setShowStaff(true)}>Facilitators</button>
           </div>
         </div>
 

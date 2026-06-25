@@ -14,7 +14,7 @@ export const ACTIVITIES = [
   'Sky Trail',
 ];
 
-export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+export const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 // Row headers for the schedule grid (every hour)
 export const TIME_SLOTS = [
