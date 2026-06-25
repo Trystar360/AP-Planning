@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import WeekGrid from './WeekGrid';
 import EntryModal from './EntryModal';
 import StaffPanel from './StaffPanel';
-import { fetchSchedule, addEntry, updateEntry, deleteEntry, fetchStaff, addStaff, deleteStaff } from './api';
+import { fetchSchedule, addEntry, updateEntry, deleteEntry, fetchStaff, addStaff, deleteStaff, copyWeek } from './api';
 import { getMonday, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
 import { ACTIVITY_COLORS, ACTIVITIES } from './constants';
 import './App.css';
@@ -17,6 +17,7 @@ export default function App() {
   const [showStaff, setShowStaff] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [collapseEmpty, setCollapseEmpty] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -26,7 +27,7 @@ export default function App() {
       setStaff(s);
       setEntries(e);
     } catch {
-      setError('Could not connect to server. Make sure the backend is running on port 3001.');
+      setError('Could not load schedule data.');
     } finally {
       setLoading(false);
     }
@@ -68,39 +69,69 @@ export default function App() {
     setStaff((prev) => prev.filter((s) => s.id !== id));
   };
 
+  const handleCopyWeek = async () => {
+    const nextWeek = addWeeks(weekStart, 1);
+    const nextLabel = formatWeekLabel(nextWeek);
+    if (!confirm(`Copy this week's schedule to ${nextLabel}?\n\nExisting entries in that week won't be overwritten.`)) return;
+    const count = await copyWeek(weekStart, nextWeek);
+    if (count === 0) {
+      alert('Nothing to copy — the next week already has all the same entries.');
+    } else {
+      alert(`Copied ${count} ${count === 1 ? 'entry' : 'entries'} to ${nextLabel}.`);
+    }
+  };
+
   const prevWeek = () => setWeekStart((w) => addWeeks(w, -1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
   const goToday = () => setWeekStart(currentWeek);
+
+  const isCurrentWeek = weekStart === currentWeek;
 
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-top">
-          <h1>AP Activity Scheduler</h1>
-          <button className="btn-secondary" onClick={() => setShowStaff(true)}>Manage Team</button>
+          <h1>AP Scheduler</h1>
+          <div className="header-actions">
+            <button className="btn-icon" title="Print schedule" onClick={() => window.print()}>🖨</button>
+            <button className="btn-secondary" onClick={() => setShowStaff(true)}>Team</button>
+          </div>
         </div>
 
         <div className="week-nav">
-          <button className="nav-btn" onClick={prevWeek}>‹ Prev</button>
+          <button className="nav-btn" onClick={prevWeek}>‹</button>
           <div className="week-label">
             <span className="week-range">{formatWeekLabel(weekStart)}</span>
-            {weekStart === currentWeek && <span className="this-week-badge">This Week</span>}
+            {isCurrentWeek && <span className="this-week-badge">This week</span>}
           </div>
-          <button className="nav-btn" onClick={nextWeek}>Next ›</button>
-          {weekStart !== currentWeek && (
-            <button className="btn-ghost" onClick={goToday}>Today</button>
-          )}
+          <button className="nav-btn" onClick={nextWeek}>›</button>
+          {!isCurrentWeek && <button className="btn-ghost" onClick={goToday}>Today</button>}
         </div>
 
-        <div className="legend">
-          {ACTIVITIES.map((a) => {
-            const c = ACTIVITY_COLORS[a];
-            return (
-              <span key={a} className="legend-item" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                {a}
-              </span>
-            );
-          })}
+        <div className="header-controls">
+          <div className="legend">
+            {ACTIVITIES.map((a) => {
+              const c = ACTIVITY_COLORS[a];
+              return (
+                <span key={a} className="legend-item" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                  {a}
+                </span>
+              );
+            })}
+          </div>
+          <div className="toolbar">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={collapseEmpty}
+                onChange={(e) => setCollapseEmpty(e.target.checked)}
+              />
+              Hide empty slots
+            </label>
+            <button className="btn-copy" onClick={handleCopyWeek} title="Copy this week's schedule to next week">
+              Copy week →
+            </button>
+          </div>
         </div>
       </header>
 
@@ -111,15 +142,19 @@ export default function App() {
         ) : (
           <WeekGrid
             entries={entries}
+            staff={staff}
             onAdd={handleAdd}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            isCurrentWeek={isCurrentWeek}
+            collapseEmpty={collapseEmpty}
           />
         )}
       </main>
 
       {modal && (
         <EntryModal
+          mode={modal.mode}
           entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, time_slot: modal.time_slot }}
           staff={staff}
           onSave={handleSave}

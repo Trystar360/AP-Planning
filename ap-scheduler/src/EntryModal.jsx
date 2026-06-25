@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ACTIVITIES, DAYS, TIME_SLOTS } from './constants';
 
-export default function EntryModal({ entry, staff, onSave, onClose }) {
+export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
   const [form, setForm] = useState({
     activity: entry?.activity || ACTIVITIES[0],
     day: entry?.day || DAYS[0],
@@ -26,7 +26,7 @@ export default function EntryModal({ entry, staff, onSave, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">{entry ? 'Edit Entry' : 'Add Entry'}</h2>
+        <h2 className="modal-title">{mode === 'edit' ? 'Edit Entry' : 'Add Entry'}</h2>
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
             Activity
