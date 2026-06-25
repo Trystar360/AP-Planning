@@ -51,7 +51,7 @@ function findConflicts(entries) {
   return conflicts;
 }
 
-export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, collapseEmpty }) {
+export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, collapseEmpty, filterStaff }) {
   const [mobileDay, setMobileDay] = useState(() => {
     const today = todayDayName();
     return DAYS.includes(today) ? today : DAYS[0];
@@ -89,10 +89,11 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
       : e.time_slot ? formatTime(e.time_slot) : '';
     const dur = durationLabel(e.start_time, e.end_time);
     const isConflict = conflicts.has(e.id);
+    const isDimmed = filterStaff && e.staff !== filterStaff;
     return (
       <div
         key={e.id}
-        className={`entry-chip${isConflict ? ' conflict' : ''}`}
+        className={`entry-chip${isConflict ? ' conflict' : ''}${isDimmed ? ' dimmed' : ''}`}
         style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}
         role="button"
         tabIndex={0}

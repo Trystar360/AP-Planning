@@ -24,15 +24,27 @@ create table if not exists schedule_entries (
 create index if not exists idx_schedule_week on schedule_entries (week_start);
 create index if not exists idx_schedule_day_time on schedule_entries (day, start_time);
 
+-- Reusable weekly templates (a saved snapshot of entries applied to any week)
+create table if not exists schedule_templates (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  entries     jsonb not null default '[]'::jsonb,
+  created_at  timestamptz default now()
+);
+
 -- Allow the anon key (used by the frontend) full read/write access.
 -- This is appropriate for a private internal team tool with no public access.
-alter table staff_members   enable row level security;
-alter table schedule_entries enable row level security;
+alter table staff_members     enable row level security;
+alter table schedule_entries  enable row level security;
+alter table schedule_templates enable row level security;
 
 create policy "anon full access" on staff_members
   for all to anon using (true) with check (true);
 
 create policy "anon full access" on schedule_entries
+  for all to anon using (true) with check (true);
+
+create policy "anon full access" on schedule_templates
   for all to anon using (true) with check (true);
 
 -- Optional: seed a few starter staff members (edit names as needed).
