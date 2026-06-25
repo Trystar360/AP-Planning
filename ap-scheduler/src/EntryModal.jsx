@@ -14,7 +14,7 @@ function normFacilitators(entry) {
   return [];
 }
 
-export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
+export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, onClose }) {
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
     activity: entry?.activity || ACTIVITIES[0],
@@ -24,6 +24,7 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
     group_name: entry?.group_name || '',
     facilitators: normFacilitators(entry),
     notes: entry?.notes || '',
+    cancelled: entry?.cancelled || false,
   });
 
   useEffect(() => {
@@ -138,8 +139,21 @@ export default function EntryModal({ mode, entry, staff, onSave, onClose }) {
               placeholder="Any additional info…"
             />
           </label>
+          {mode === 'edit' && (
+            <label className="cancelled-check-label">
+              <input
+                type="checkbox"
+                checked={form.cancelled}
+                onChange={(e) => setForm((f) => ({ ...f, cancelled: e.target.checked }))}
+              />
+              Mark as cancelled (kept on the schedule, shown struck-through)
+            </label>
+          )}
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+            {mode === 'edit' && onDuplicate && (
+              <button type="button" className="btn-secondary" onClick={() => onDuplicate(form)}>Duplicate</button>
+            )}
             <button type="submit" className="btn-primary">Save</button>
           </div>
         </form>

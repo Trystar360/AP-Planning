@@ -261,41 +261,42 @@ body {
 }
 .day-tab.active .day-tab-badge { background: rgba(255,255,255,0.3); }
 
-/* ── Grid ── */
-.week-grid-wrapper {
-  overflow-x: auto;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+/* ── Timeline (calendar week view) ── */
+.timeline {
+  display: grid;
   background: var(--surface);
   border: 1px solid var(--border);
-  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
-.week-grid {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 700px;
-}
-
-.week-grid th {
+.tl-corner {
+  position: sticky;
+  top: 0;
+  z-index: 6;
   background: #f1f5f9;
+  border-bottom: 2px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.tl-day-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #f1f5f9;
+  border-bottom: 2px solid var(--border);
+  border-right: 1px solid var(--border);
   padding: 9px 6px;
   font-size: 0.8rem;
   font-weight: 700;
   text-align: center;
-  border-bottom: 2px solid var(--border);
-  border-right: 1px solid var(--border);
   white-space: nowrap;
-  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.week-grid th:last-child { border-right: none; }
-
-.today-col th,
-th.today-col {
-  background: var(--today-bg) !important;
-}
-
-.time-col { width: 58px; }
+.tl-day-head:last-child { border-right: none; }
+.tl-day-head.today-col { background: var(--today-bg); color: var(--primary); }
 
 .today-dot {
   display: inline-block;
@@ -309,115 +310,90 @@ th.today-col {
   top: -1px;
 }
 
-.week-grid tr { transition: background 0.1s; }
-.row-active { background: #fffbf0; }
-
-.week-grid td {
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
+.tl-gutter {
+  position: relative;
+  background: #f8fafc;
+  border-right: 2px solid var(--border);
 }
-.week-grid td:last-child { border-right: none; }
-
-.time-cell {
-  font-size: 0.72rem;
+.tl-hour-label {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 0.66rem;
   font-weight: 600;
   color: var(--text-muted);
-  text-align: center;
-  padding: 6px 4px;
   white-space: nowrap;
-  background: #f8fafc;
-  border-right: 2px solid var(--border) !important;
 }
 
-.day-cell {
-  padding: 0;
-  min-height: 44px;
-  cursor: pointer;
+.tl-day-col {
   position: relative;
-}
-
-.cell-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 3px;
-  min-height: 44px;
-}
-
-/* Spanning cells: height: 1px tricks children into inheriting the full rowspan height */
-.day-cell.spanning-cell {
-  height: 1px;
-  padding: 0;
-}
-.day-cell.spanning-cell > .cell-inner {
-  height: 100%;
-}
-
-/* A single chip that should fill the entire spanning cell */
-.entry-chip.chip-fill {
-  flex: 1;
-  margin-bottom: 0;
-}
-.day-cell:hover { background: #eff6ff; }
-.day-cell.today-col { background: #f8fbff; }
-.day-cell.today-col:hover { background: #dbeafe; }
-
-.add-cell {
-  display: block;
-  width: 100%;
-  text-align: center;
-  color: #94a3b8;
-  background: none;
-  border: none;
+  border-right: 1px solid var(--border);
   cursor: pointer;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 6px 0;
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.12s;
 }
-.day-cell:hover .add-cell { opacity: 1; }
-.add-cell:hover { background: #e0ecff; color: var(--primary); }
-.add-cell:focus-visible {
-  opacity: 1;
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
-  color: var(--primary);
+.tl-day-col:last-child { border-right: none; }
+.tl-day-col.today-col { background: #f8fbff; }
+
+.tl-hourline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-bottom: 1px solid var(--border);
+  pointer-events: none;
 }
-/* On touch devices there's no hover — keep the add cue faintly visible */
-@media (hover: none) {
-  .add-cell { opacity: 0.55; }
+
+.tl-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #dc2626;
+  z-index: 4;
+  pointer-events: none;
+}
+.tl-now-dot {
+  position: absolute;
+  left: -4px;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dc2626;
 }
 
 .empty-week-msg {
   text-align: center;
-  padding: 40px 20px;
+  padding: 28px 20px;
   color: var(--text-muted);
   font-size: 0.9rem;
 }
 
-/* ── Entry chips ── */
+/* ── Entry chips (absolutely positioned in a day column) ── */
 .entry-chip {
-  position: relative;
+  position: absolute;
   border: 1.5px solid;
   border-radius: 6px;
-  padding: 4px 26px 4px 6px;
-  margin-bottom: 3px;
+  padding: 3px 22px 3px 6px;
   cursor: pointer;
   font-size: 0.76rem;
   display: flex;
   flex-direction: column;
   gap: 1px;
+  overflow: hidden;
   transition: filter 0.12s;
+  z-index: 2;
 }
-.entry-chip:hover { filter: brightness(0.95); }
+.entry-chip:hover { filter: brightness(0.95); z-index: 3; }
 .entry-chip:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
+  z-index: 3;
 }
-.entry-chip:last-child { margin-bottom: 0; }
+.entry-chip.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 22px 2px 6px;
+}
 
 .chip-activity { font-weight: 700; font-size: 0.76rem; }
 
@@ -444,6 +420,65 @@ th.today-col {
   outline: 2px solid #dc2626;
   outline-offset: -1px;
 }
+
+.entry-chip.cancelled {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
+.entry-chip.cancelled .chip-activity,
+.entry-chip.cancelled .chip-group,
+.entry-chip.cancelled .chip-time { text-decoration: line-through; }
+.chip-cancelled-tag {
+  margin-left: 5px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: rgba(0,0,0,0.12);
+  padding: 0 4px;
+  border-radius: 4px;
+  text-decoration: none !important;
+}
+
+.cancelled-check-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+.cancelled-check-label input { width: 16px; height: 16px; }
+
+/* Export dropdown */
+.export-wrap { position: relative; }
+.export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  z-index: 50;
+  padding: 4px;
+  min-width: 200px;
+}
+.export-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  font-size: 0.84rem;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.export-menu button:hover { background: var(--bg); }
 
 .conflict-banner {
   background: #fef2f2;
@@ -482,7 +517,7 @@ th.today-col {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 26px;
+  width: 22px;
   background: none;
   border: none;
   border-left: 1px solid transparent;
@@ -866,18 +901,22 @@ th.today-col {
 
   .header-controls { flex-direction: column; gap: 8px; }
 
-  .toolbar { width: 100%; justify-content: space-between; }
+  /* Filter dropdown gets its own full-width row; buttons share the next */
+  .toolbar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .staff-filter { grid-column: 1 / -1; width: 100%; }
+  .toggle-label { justify-self: start; align-self: center; }
+  .toolbar .btn-secondary,
+  .toolbar .btn-copy { width: 100%; }
 
-  /* Show day tabs, hide desktop-only columns */
+  /* Show day tabs; timeline already renders a single day on mobile */
   .day-tabs { display: flex; }
 
-  .mobile-hidden { display: none !important; }
-  .mobile-visible { display: table-cell !important; }
-
-  .week-grid { min-width: 0; width: 100%; }
-
-  /* On mobile the grid is just Time + 1 day — needs no horizontal scroll */
-  .week-grid-wrapper { overflow-x: hidden; }
+  .tl-day-head { font-size: 0.78rem; }
 
   .modal-backdrop {
     align-items: flex-end;
@@ -902,19 +941,16 @@ th.today-col {
 /* ── Print ── */
 @media print {
   .app-header { position: static; box-shadow: none; border-bottom: 2px solid #000; padding: 8px 0 12px; }
-  .header-actions, .toolbar, .day-tabs, .btn-copy, .toggle-label { display: none !important; }
+  .header-actions, .toolbar, .day-tabs, .btn-copy, .toggle-label, .export-wrap { display: none !important; }
   .app-main { padding: 0; }
-  .week-grid-wrapper { box-shadow: none; border: none; overflow: visible; }
-  .week-grid { min-width: 0; font-size: 0.72rem; }
-  .entry-chip { break-inside: avoid; }
+  .timeline { box-shadow: none; border: 1px solid #000; }
+  .tl-corner, .tl-day-head, .tl-gutter { background: none !important; }
+  .entry-chip { break-inside: avoid; box-shadow: none; }
   .chip-delete { display: none; }
-  .day-cell { min-height: 0; cursor: default; }
-  .add-cell { display: none; }
+  .tl-day-col { cursor: default; }
   .conflict-banner { border: 1px solid #000; color: #000; background: none; }
   /* Per-person rota: when filtering, only that member's shifts print */
   .entry-chip.dimmed { display: none !important; }
   .filter-banner, .summary-bar, .toast { display: none !important; }
-  .mobile-hidden { display: table-cell !important; }
-  .day-tabs { display: none !important; }
   @page { margin: 1.5cm; }
 }

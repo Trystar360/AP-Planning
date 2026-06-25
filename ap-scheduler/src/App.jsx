@@ -13,7 +13,8 @@ import {
   isShared,
 } from './api';
 import { getMonday, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
-import { ACTIVITY_COLORS, ACTIVITIES } from './constants';
+import { ACTIVITY_COLORS } from './constants';
+import { exportICS, exportCSV } from './exporters';
 import './App.css';
 
 const currentWeek = formatWeekStart(getMonday(new Date()));
@@ -31,7 +32,8 @@ export default function App() {
   const [filterStaff, setFilterStaff] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [collapseEmpty, setCollapseEmpty] = useState(false);
+  const [fullDay, setFullDay] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef();
 
@@ -84,6 +86,25 @@ export default function App() {
     } catch {
       showToast('Failed to save entry.');
     }
+  };
+
+  const handleDuplicate = async (form) => {
+    try {
+      const { cancelled: _c, ...rest } = form;
+      await addEntry({ ...rest, week_start: weekStart });
+      setModal(null);
+      loadAll();
+      showToast('Entry duplicated.');
+    } catch {
+      showToast('Could not duplicate entry.');
+    }
+  };
+
+  const handleExport = (kind) => {
+    setExportOpen(false);
+    if (!entries.length) { showToast('Nothing to export for this week.'); return; }
+    if (kind === 'ics') exportICS(entries, weekStart);
+    else exportCSV(entries, weekStart);
   };
 
   const handleDelete = async (id) => {
@@ -175,6 +196,16 @@ export default function App() {
   const isCurrentWeek = weekStart === currentWeek;
   const printTitle = filterStaff ? `Print ${filterStaff}'s rota` : 'Print schedule';
 
+  // Smart legend — only show activities actually scheduled this week.
+  const presentActivities = [...new Set(entries.map((e) => e.activity))]
+    .filter((a) => ACTIVITY_COLORS[a]);
+
+  useEffect(() => {
+    if (!exportOpen) return undefined;
+    const close = () => setExportOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [exportOpen]);
 
   return (
     <div className="app">
@@ -183,6 +214,17 @@ export default function App() {
           <h1>AP Scheduler {isShared && <span className="shared-badge">● Live</span>}</h1>
           <div className="header-actions">
             <button className="btn-icon" title={printTitle} onClick={() => window.print()}>🖨</button>
+            <div className="export-wrap" onClick={(e) => e.stopPropagation()}>
+              <button className="btn-secondary" onClick={() => setExportOpen((v) => !v)} aria-haspopup="true" aria-expanded={exportOpen}>
+                Export ▾
+              </button>
+              {exportOpen && (
+                <div className="export-menu" role="menu">
+                  <button role="menuitem" onClick={() => handleExport('ics')}>📅 Add to calendar (.ics)</button>
+                  <button role="menuitem" onClick={() => handleExport('csv')}>📄 Download CSV</button>
+                </div>
+              )}
+            </div>
             <button className="btn-secondary" onClick={() => setShowTemplates(true)}>Templates</button>
             <button className="btn-secondary" onClick={() => setShowStaff(true)}>Facilitators</button>
           </div>
@@ -199,16 +241,18 @@ export default function App() {
         </div>
 
         <div className="header-controls">
-          <div className="legend">
-            {ACTIVITIES.map((a) => {
-              const c = ACTIVITY_COLORS[a];
-              return (
-                <span key={a} className="legend-item" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                  {a}
-                </span>
-              );
-            })}
-          </div>
+          {presentActivities.length > 0 && (
+            <div className="legend">
+              {presentActivities.map((a) => {
+                const c = ACTIVITY_COLORS[a];
+                return (
+                  <span key={a} className="legend-item" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                    {a}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           <div className="toolbar">
             <select
               className="staff-filter"
@@ -222,10 +266,10 @@ export default function App() {
             <label className="toggle-label">
               <input
                 type="checkbox"
-                checked={collapseEmpty}
-                onChange={(e) => setCollapseEmpty(e.target.checked)}
+                checked={fullDay}
+                onChange={(e) => setFullDay(e.target.checked)}
               />
-              Hide empty
+              Full day
             </label>
             <button className="btn-secondary" onClick={() => setShowSummary((v) => !v)}>
               {showSummary ? 'Hide summary' : 'Summary'}
@@ -257,7 +301,7 @@ export default function App() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               isCurrentWeek={isCurrentWeek}
-              collapseEmpty={collapseEmpty}
+              fullDay={fullDay}
               filterStaff={filterStaff}
             />
           </>
@@ -270,6 +314,7 @@ export default function App() {
           entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, start_time: modal.start_time }}
           staff={staff}
           onSave={handleSave}
+          onDuplicate={handleDuplicate}
           onClose={() => setModal(null)}
         />
       )}

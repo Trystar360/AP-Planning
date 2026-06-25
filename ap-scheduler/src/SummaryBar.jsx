@@ -7,7 +7,8 @@ function getFacilitators(e) {
   return [];
 }
 
-export default function SummaryBar({ entries, staff }) {
+export default function SummaryBar({ entries: allEntries, staff }) {
+  const entries = allEntries.filter((e) => !e.cancelled);
   if (entries.length === 0) return null;
 
   // Per-activity counts
