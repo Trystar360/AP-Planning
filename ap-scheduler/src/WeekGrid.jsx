@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { DAYS, ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
 import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter } from './utils';
 
-const HOUR_PX = 60;          // vertical pixels per hour
-const DAY_MIN = 8 * 60;      // 8:00 AM — earliest the timeline can show
-const DAY_MAX = 21 * 60;     // 9:00 PM — latest the timeline can show
+const HOUR_PX = 60;
+const DAY_MIN = 8 * 60;
+const DAY_MAX = 21 * 60;
 const MIN_CHIP_PX = 26;
 
 function todayDayName() {
@@ -25,7 +25,6 @@ function getFacilitators(e) {
   return [];
 }
 
-// Conflicts: same facilitator booked for overlapping times on the same day.
 function findConflicts(entries) {
   const conflicts = new Set();
   const groups = {};
@@ -48,7 +47,6 @@ function findConflicts(entries) {
   return conflicts;
 }
 
-// Assign side-by-side lanes to overlapping entries within one day.
 function packLanes(dayEntries) {
   const events = [...dayEntries].sort((a, b) => entryStart(a) - entryStart(b) || entryEnd(a) - entryEnd(b));
   const placements = [];
@@ -82,6 +80,10 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
   );
   const [nowMin, setNowMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); });
+  const [showSwipeHint, setShowSwipeHint] = useState(() => {
+    try { return !localStorage.getItem('ap:swipe-hint-seen'); }
+    catch { return false; }
+  });
   const touch = useRef(null);
 
   useEffect(() => {
@@ -96,11 +98,15 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
     return () => clearInterval(t);
   }, []);
 
+  const dismissSwipeHint = () => {
+    setShowSwipeHint(false);
+    try { localStorage.setItem('ap:swipe-hint-seen', '1'); } catch {}
+  };
+
   const conflicts = findConflicts(entries);
   const todayName = isCurrentWeek ? todayDayName() : null;
   const visibleDays = isMobile ? [mobileDay] : DAYS;
 
-  // Visible time window — collapse to occupied range unless "full day" is on.
   let winStart = DAY_MIN, winEnd = DAY_MAX;
   if (!entries.length) {
     winStart = 9 * 60; winEnd = 17 * 60;
@@ -119,6 +125,12 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
   const yFor = (mins) => ((Math.max(winStart, Math.min(winEnd, mins)) - winStart) / 60) * HOUR_PX;
 
   const dayEntryCount = (day) => entries.filter((e) => e.day === day && !e.cancelled).length;
+
+  // Up to 3 unique activity colours for the week strip dots
+  const dayActivityColors = (day) =>
+    [...new Set(entries.filter((e) => e.day === day && !e.cancelled).map((e) => e.activity))]
+      .slice(0, 3)
+      .map((a) => ACTIVITY_COLORS[a]?.bg || '#94a3b8');
 
   const handleColumnClick = (day, ev) => {
     const rect = ev.currentTarget.getBoundingClientRect();
@@ -140,7 +152,10 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       const idx = DAYS.indexOf(mobileDay);
       const next = dx < 0 ? idx + 1 : idx - 1;
-      if (next >= 0 && next < DAYS.length) setMobileDay(DAYS[next]);
+      if (next >= 0 && next < DAYS.length) {
+        setMobileDay(DAYS[next]);
+        dismissSwipeHint();
+      }
     }
   };
 
@@ -194,6 +209,7 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           </span>
         )}
         {!compact && e.notes && <span className="chip-notes">{e.notes}</span>}
+        <span className="chip-edit-hint" aria-hidden="true">✏</span>
         <button
           className="chip-delete"
           onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
@@ -212,6 +228,33 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
         </div>
       )}
 
+      {/* Mobile week overview strip — shows all 7 days with activity colour dots */}
+      <div className="week-strip">
+        {DAYS.map((d) => {
+          const dots = dayActivityColors(d);
+          const count = dayEntryCount(d);
+          const isActive = mobileDay === d;
+          const isToday = d === todayName;
+          return (
+            <button
+              key={d}
+              className={`wsd${isActive ? ' active' : ''}${isToday ? ' today' : ''}`}
+              onClick={() => setMobileDay(d)}
+              aria-pressed={isActive}
+              aria-label={`${d}${count > 0 ? `, ${count} activities` : ', no activities'}${isToday ? ', today' : ''}`}
+            >
+              <span className="wsd-name">{d.slice(0, 3)}</span>
+              <span className="wsd-dots">
+                {dots.map((c, i) => <span key={i} className="wsd-dot" style={{ background: c }} />)}
+                {dots.length === 0 && <span className="wsd-dot empty" />}
+              </span>
+              {count > 0 && <span className="wsd-count">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Day tabs — desktop only (week strip handles mobile) */}
       <div className="day-tabs">
         {DAYS.map((d) => {
           const count = dayEntryCount(d);
@@ -227,6 +270,13 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           );
         })}
       </div>
+
+      {showSwipeHint && (
+        <div className="swipe-hint" role="status" onClick={dismissSwipeHint}>
+          ← Swipe to change day →
+          <button className="swipe-hint-dismiss" aria-label="Dismiss hint">×</button>
+        </div>
+      )}
 
       <div
         className="timeline"
@@ -249,6 +299,7 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           const dayEntries = entries.filter((e) => e.day === d);
           const placements = packLanes(dayEntries);
           const showNow = todayName === d && nowMin >= winStart && nowMin <= winEnd;
+          const isEmpty = dayEntries.length === 0;
           return (
             <div
               key={d}
@@ -261,6 +312,12 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
               {hourLabels.slice(0, -1).map((m) => (
                 <div key={m} className="tl-hourline" style={{ top: yFor(m + 60) }} />
               ))}
+              {isEmpty && (
+                <div className="col-empty-hint" aria-hidden="true">
+                  <span className="col-empty-plus">+</span>
+                  <span className="col-empty-label">Tap to add</span>
+                </div>
+              )}
               {placements.map((p) => renderChip(p.entry, p.lane, p.lanes))}
               {showNow && (
                 <div className="tl-now" style={{ top: yFor(nowMin) }} aria-hidden="true">
@@ -273,8 +330,20 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
       </div>
 
       {entries.length === 0 && (
-        <p className="empty-week-msg">No activities scheduled yet — tap any time to add one.</p>
+        <div className="empty-week">
+          <p className="empty-week-title">No activities scheduled this week</p>
+          <p className="empty-week-sub">Tap any time slot or the <strong>+</strong> button to add one.</p>
+        </div>
       )}
+
+      {/* Floating add button — mobile only */}
+      <button
+        className="fab-add"
+        onClick={() => onAdd(mobileDay, minutesToHHMM(Math.max(winStart, 9 * 60)))}
+        aria-label="Add activity"
+      >
+        +
+      </button>
     </div>
   );
 }

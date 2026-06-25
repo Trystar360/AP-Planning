@@ -33,6 +33,11 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="modal-title" id="staff-modal-title">Manage Facilitators</h2>
+        {staff.length === 0 && (
+          <p className="staff-empty-hint">
+            Add your team members below — they'll appear as options when creating activities.
+          </p>
+        )}
         <ul className="staff-list">
           {staff.map((s, i) => (
             <li key={s.id} className="staff-item">

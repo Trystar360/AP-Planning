@@ -28,7 +28,7 @@ export default function App() {
   const [showStaff, setShowStaff] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
   const [filterStaff, setFilterStaff] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,6 +84,7 @@ export default function App() {
       }
       setModal(null);
       loadAll();
+      showToast('Saved ✓');
     } catch {
       showToast('Failed to save entry.');
     }
@@ -295,26 +296,26 @@ export default function App() {
                 checked={fullDay}
                 onChange={(e) => setFullDay(e.target.checked)}
               />
-              Full day
+              Show all hours
             </label>
             <button className="btn-secondary" onClick={() => setShowSummary((v) => !v)}>
-              {showSummary ? 'Hide summary' : 'Summary'}
+              {showSummary ? 'Hide summary' : 'Show summary'}
             </button>
-            <button className="btn-copy" onClick={() => setCopyOpen(true)} title="Copy this week's schedule elsewhere">
-              Copy…
+            <button className="btn-copy" onClick={() => setCopyOpen(true)} title="Copy this week's schedule to another week">
+              Copy week…
             </button>
           </div>
+        {filterStaff && (
+          <div className="filter-active-bar">
+            <span>Showing <strong>{filterStaff}</strong> only</span>
+            <button className="btn-ghost filter-clear" onClick={() => setFilterStaff('')}>✕ Clear filter</button>
+          </div>
+        )}
         </div>
       </header>
 
       <main className="app-main">
         {error && <div className="error-banner">{error}</div>}
-        {filterStaff && (
-          <div className="filter-banner">
-            Showing <strong>{filterStaff}</strong>'s activities.
-            <button className="btn-ghost" onClick={() => setFilterStaff('')}>Show all</button>
-          </div>
-        )}
         {loading ? (
           <div className="loading">Loading…</div>
         ) : (
@@ -342,6 +343,7 @@ export default function App() {
           onSave={handleSave}
           onDuplicate={handleDuplicate}
           onClose={() => setModal(null)}
+          onOpenFacilitators={() => { setModal(null); setShowStaff(true); }}
         />
       )}
 

@@ -909,6 +909,222 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Filter active bar (sticky in header) ── */
+.filter-active-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+.filter-clear {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #92400e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Week strip (mobile 7-day overview) ── */
+.week-strip {
+  display: none; /* shown on mobile */
+  gap: 4px;
+  padding: 8px 4px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.week-strip::-webkit-scrollbar { display: none; }
+
+.wsd {
+  flex: 1;
+  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px 5px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.wsd:hover { background: var(--bg); }
+.wsd.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.wsd.today { border-color: var(--primary); }
+.wsd.active .wsd-name { color: #fff; }
+.wsd.active .wsd-count { background: rgba(255,255,255,0.25); color: #fff; }
+
+.wsd-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.wsd.active .wsd-name,
+.wsd.today:not(.active) .wsd-name { color: var(--primary); }
+
+.wsd-dots {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  height: 8px;
+}
+.wsd-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.wsd-dot.empty { background: var(--border); }
+
+.wsd-count {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--bg);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+/* ── Column empty hint ── */
+.col-empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tl-day-col:hover .col-empty-hint { opacity: 1; }
+.col-empty-plus {
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.col-empty-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Empty week message ── */
+.empty-week {
+  text-align: center;
+  padding: 32px 16px 16px;
+}
+.empty-week-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.empty-week-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Floating add button (mobile only) ── */
+.fab-add {
+  display: none; /* shown on mobile */
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  z-index: 30;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.fab-add:active {
+  transform: scale(0.94);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ── Swipe hint ── */
+.swipe-hint {
+  display: none; /* shown on mobile */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 4px 12px 6px;
+  cursor: pointer;
+}
+.swipe-hint-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+/* ── Chip edit hint (pencil shown on hover) ── */
+.chip-edit-hint {
+  display: none;
+  position: absolute;
+  top: 4px;
+  right: 22px;
+  font-size: 0.7rem;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.entry-chip:hover .chip-edit-hint,
+.entry-chip:focus .chip-edit-hint { display: block; }
+
+/* ── Facilitator empty prompt ── */
+.facilitator-empty {
+  padding: 8px 0 4px;
+}
+.facilitator-empty p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.facilitator-setup-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  padding: 0;
+}
+
+/* ── Staff panel empty hint ── */
+.staff-empty-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 8px 0 12px;
+  line-height: 1.5;
+}
+
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
   .app-header { padding: 10px 12px 8px; }
@@ -978,8 +1194,16 @@ body {
   .toolbar .btn-secondary,
   .toolbar .btn-copy { width: 100%; }
 
-  /* Show day tabs; timeline already renders a single day on mobile */
-  .day-tabs { display: flex; }
+  /* Week strip replaces day tabs on mobile */
+  .week-strip { display: flex; }
+  .day-tabs { display: none; }
+
+  /* Show swipe hint and FAB on mobile */
+  .swipe-hint { display: flex; }
+  .fab-add { display: flex; align-items: center; justify-content: center; }
+
+  /* Column empty hint always visible on mobile (no hover) */
+  .tl-day-col .col-empty-hint { opacity: 1; }
 
   .tl-day-head { font-size: 0.78rem; }
 

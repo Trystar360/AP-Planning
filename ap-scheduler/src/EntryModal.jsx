@@ -14,7 +14,7 @@ function normFacilitators(entry) {
   return [];
 }
 
-export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, onClose }) {
+export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, onClose, onOpenFacilitators }) {
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
     activity: entry?.activity || ACTIVITIES[0],
@@ -116,7 +116,16 @@ export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, on
           </div>
           <fieldset className="facilitator-fieldset">
             <legend>Facilitator(s)</legend>
-            {staff.length === 0 && <p className="facilitator-empty">No facilitators added yet — use the Facilitators panel.</p>}
+            {staff.length === 0 && (
+              <div className="facilitator-empty">
+                <p>No facilitators set up yet.</p>
+                {onOpenFacilitators && (
+                  <button type="button" className="btn-ghost facilitator-setup-link" onClick={onOpenFacilitators}>
+                    Set up facilitators →
+                  </button>
+                )}
+              </div>
+            )}
             <div className="facilitator-checks">
               {staff.map((s) => (
                 <label key={s.id} className="facilitator-check-label">
@@ -146,7 +155,7 @@ export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, on
                 checked={form.cancelled}
                 onChange={(e) => setForm((f) => ({ ...f, cancelled: e.target.checked }))}
               />
-              Mark as cancelled (kept on the schedule, shown struck-through)
+              Mark as cancelled — keeps the activity on the schedule shown struck through, so you don't lose the history
             </label>
           )}
           <div className="modal-actions">
