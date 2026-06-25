@@ -159,7 +159,7 @@ const ls = {
 
   addEntry(entry) {
     const entries = getEntryStore();
-    const record = { id: uuid(), notes: '', group_name: '', facilitators: [], ...entry };
+    const record = { id: uuid(), notes: '', group_name: '', facilitators: [], cancelled: false, ...entry };
     entries.push(record);
     lsWrite(SCHEDULE_KEY, entries);
     return resolve(record);

@@ -17,6 +17,7 @@ create table if not exists schedule_entries (
   end_time     text not null default '10:00',
   group_name   text not null default '',
   facilitators text[] not null default '{}',
+  cancelled    boolean not null default false,
   notes        text not null default '',
   created_at   timestamptz default now()
 );
@@ -25,6 +26,7 @@ create table if not exists schedule_entries (
 --   alter table schedule_entries add column if not exists facilitators text[] not null default '{}';
 --   update schedule_entries set facilitators = array[staff] where staff <> '' and facilitators = '{}';
 --   alter table schedule_entries drop column if exists staff;
+--   alter table schedule_entries add column if not exists cancelled boolean not null default false;
 
 create index if not exists idx_schedule_week on schedule_entries (week_start);
 create index if not exists idx_schedule_day_time on schedule_entries (day, start_time);

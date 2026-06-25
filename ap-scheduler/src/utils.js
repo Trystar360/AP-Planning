@@ -52,3 +52,14 @@ export function durationLabel(start, end) {
   if (mins <= 0) return '';
   return formatMinutes(mins);
 }
+
+export function minutesToHHMM(mins) {
+  const clamped = Math.max(0, Math.min(24 * 60 - 1, Math.round(mins)));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export function roundToQuarter(mins) {
+  return Math.round(mins / 15) * 15;
+}
