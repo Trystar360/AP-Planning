@@ -52,7 +52,25 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
+
+/* Hamburger toggle: hidden on desktop, shown on mobile */
+.menu-toggle {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+.menu-toggle-icon { font-size: 1.05rem; line-height: 1; }
+
+/* The action buttons: an inline row on desktop, a dropdown panel on mobile */
+.header-action-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Print button shows only its icon on desktop */
+.action-print .action-text { display: none; }
 
 .shared-badge {
   font-size: 0.6rem;
@@ -896,6 +914,53 @@ body {
   .app-header { padding: 10px 12px 8px; }
 
   .header-top h1 { font-size: 1.05rem; }
+
+  /* Collapse the action buttons behind a hamburger menu */
+  .menu-toggle { display: inline-flex; }
+
+  .header-action-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    padding: 8px;
+    min-width: 210px;
+    z-index: 40;
+  }
+  .header-action-menu.open { display: flex; }
+
+  .header-action-menu .btn-icon,
+  .header-action-menu .btn-secondary,
+  .header-action-menu .export-wrap { width: 100%; }
+
+  .header-action-menu .btn-icon,
+  .header-action-menu .export-wrap > .btn-secondary,
+  .header-action-menu > .btn-secondary {
+    text-align: left;
+    padding: 10px 12px;
+  }
+
+  /* Show the Print label inside the menu */
+  .action-print .action-text { display: inline; }
+
+  /* Export submenu renders inline within the dropdown, not floating */
+  .header-action-menu .export-menu {
+    position: static;
+    box-shadow: none;
+    border: none;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    margin-top: 4px;
+    padding: 4px 0 0;
+    min-width: 0;
+  }
 
   .week-range { font-size: 0.85rem; }
 
