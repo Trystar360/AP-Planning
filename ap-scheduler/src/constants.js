@@ -1,0 +1,27 @@
+export const ACTIVITIES = [
+  'Zip Line',
+  'Mini Zip Line',
+  'Climbing Wall',
+  'Climbing Tower',
+  'Laser Tag',
+  'Power Swing',
+  'Sky Trail',
+];
+
+export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+export const TIME_SLOTS = [
+  '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00',
+  '18:00', '19:00', '20:00',
+];
+
+export const ACTIVITY_COLORS = {
+  'Zip Line':       { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
+  'Mini Zip Line':  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0c4a6e' },
+  'Climbing Wall':  { bg: '#dcfce7', border: '#22c55e', text: '#14532d' },
+  'Climbing Tower': { bg: '#d1fae5', border: '#10b981', text: '#064e3b' },
+  'Laser Tag':      { bg: '#fce7f3', border: '#ec4899', text: '#831843' },
+  'Power Swing':    { bg: '#fef3c7', border: '#f59e0b', text: '#78350f' },
+  'Sky Trail':      { bg: '#ede9fe', border: '#8b5cf6', text: '#4c1d95' },
+};
