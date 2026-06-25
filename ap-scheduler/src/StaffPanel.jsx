@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { STAFF_PALETTE } from './constants';
 
 export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
   const [name, setName] = useState('');
@@ -19,11 +20,14 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">Manage Staff</h2>
+        <h2 className="modal-title">Manage Team</h2>
         <ul className="staff-list">
-          {staff.map((s) => (
+          {staff.map((s, i) => (
             <li key={s.id} className="staff-item">
-              <span>{s.name}</span>
+              <span className="staff-item-name">
+                <span className="staff-color-dot" style={{ background: STAFF_PALETTE[i % STAFF_PALETTE.length] }} />
+                {s.name}
+              </span>
               <button className="btn-danger-sm" onClick={() => onDelete(s.id)}>Remove</button>
             </li>
           ))}
@@ -34,6 +38,7 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="New team member name"
+            autoComplete="off"
           />
           <button type="submit" className="btn-primary">Add</button>
         </form>

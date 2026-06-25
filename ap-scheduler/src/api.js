@@ -1,9 +1,5 @@
 // localStorage-backed data layer.
-//
-// This keeps the same async function signatures the app already uses, so the
-// UI code is unchanged. Data is stored in the browser, which is great for
-// testing/demo. To switch back to a shared backend later, swap this file for
-// one that calls a real API (see server.js for the matching endpoints).
+// Same async signatures as the real API in server.js — swap this file to use a backend.
 
 const SCHEDULE_KEY = 'ap-scheduler:entries';
 const STAFF_KEY = 'ap-scheduler:staff';
@@ -24,7 +20,6 @@ function write(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// Seed a few default team members on first run.
 function getStaffStore() {
   let staff = read(STAFF_KEY, null);
   if (!staff) {
@@ -42,7 +37,6 @@ function getEntryStore() {
   return read(SCHEDULE_KEY, []);
 }
 
-// Simulate async so callers using await keep working unchanged.
 const resolve = (value) => Promise.resolve(value);
 
 export async function fetchSchedule(weekStart) {
@@ -91,4 +85,22 @@ export async function addStaff(name) {
 export async function deleteStaff(id) {
   write(STAFF_KEY, getStaffStore().filter((s) => s.id !== id));
   return resolve();
+}
+
+// Copies all entries from one week to another. Returns count added.
+// Skips entries that already exist in the target week (same activity+day+time_slot+staff).
+export async function copyWeek(fromWeek, toWeek) {
+  const all = getEntryStore();
+  const source = all.filter((e) => e.week_start === fromWeek);
+  const target = all.filter((e) => e.week_start === toWeek);
+
+  const key = (e) => `${e.activity}|${e.day}|${e.time_slot}|${e.staff}`;
+  const existing = new Set(target.map(key));
+
+  const newEntries = source
+    .filter((e) => !existing.has(key(e)))
+    .map((e) => ({ ...e, id: uuid(), week_start: toWeek }));
+
+  write(SCHEDULE_KEY, [...all, ...newEntries]);
+  return resolve(newEntries.length);
 }

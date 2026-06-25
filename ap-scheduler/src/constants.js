@@ -1,3 +1,9 @@
+// Colour palette assigned to staff members in order (wraps if > 8 members).
+export const STAFF_PALETTE = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6',
+];
+
 export const ACTIVITIES = [
   'Zip Line',
   'Mini Zip Line',
