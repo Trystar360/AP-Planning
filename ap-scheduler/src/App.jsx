@@ -387,6 +387,7 @@ export default function App() {
           <>
             {showSummary && <SummaryBar entries={entries} staff={staff} activityColors={activityColors} />}
             <WeekGrid
+              weekStart={weekStart}
               entries={entries}
               staff={staff}
               onAdd={handleAdd}
@@ -407,6 +408,7 @@ export default function App() {
           entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, start_time: modal.start_time }}
           staff={staff}
           activities={activities}
+          weekStart={weekStart}
           onSave={handleSave}
           onDuplicate={handleDuplicate}
           onClose={() => setModal(null)}

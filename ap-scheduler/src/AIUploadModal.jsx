@@ -13,14 +13,16 @@ function normalizeActivity(str, activities) {
   if (exact) return exact;
   const partial = activities.find(a => sl.includes(a.toLowerCase()) || a.toLowerCase().includes(sl));
   if (partial) return partial;
-  if (sl.includes('zip') && (sl.includes('mini') || sl.includes('small'))) return 'Mini Zip Line';
-  if (sl.includes('zip')) return 'Zip Line';
-  if (sl.includes('climb') && sl.includes('tower')) return 'Climbing Tower';
-  if (sl.includes('climb')) return 'Climbing Wall';
-  if (sl.includes('laser')) return 'Laser Tag';
-  if (sl.includes('swing')) return 'Power Swing';
-  if (sl.includes('sky') || sl.includes('trail')) return 'Sky Trail';
-  return s; // keep the raw string rather than silently defaulting
+  // Keyword fallbacks — only fire when the named activity exists in the user's list
+  const has = (name) => activities.includes(name);
+  if (sl.includes('zip') && (sl.includes('mini') || sl.includes('small')) && has('Mini Zip Line')) return 'Mini Zip Line';
+  if (sl.includes('zip') && has('Zip Line')) return 'Zip Line';
+  if (sl.includes('climb') && sl.includes('tower') && has('Climbing Tower')) return 'Climbing Tower';
+  if (sl.includes('climb') && has('Climbing Wall')) return 'Climbing Wall';
+  if (sl.includes('laser') && has('Laser Tag')) return 'Laser Tag';
+  if (sl.includes('swing') && has('Power Swing')) return 'Power Swing';
+  if ((sl.includes('sky') || sl.includes('trail')) && has('Sky Trail')) return 'Sky Trail';
+  return s;
 }
 
 function normalizeDay(str) {
@@ -158,6 +160,7 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
   const [preview, setPreview] = useState(null);
   const [entries, setEntries] = useState([]);
   const [selected, setSelected] = useState(new Set());
+  const [editingIdx, setEditingIdx] = useState(null);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef();
@@ -208,6 +211,10 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
       next.has(i) ? next.delete(i) : next.add(i);
       return next;
     });
+  };
+
+  const updateEntry = (i, changes) => {
+    setEntries(prev => prev.map((e, idx) => idx === i ? { ...e, ...changes } : e));
   };
 
   const handleImport = () => {
@@ -300,44 +307,146 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
                 <p className="ai-review-count">
                   Found <strong>{entries.length}</strong> {entries.length === 1 ? 'entry' : 'entries'}
                   {weekLabel ? <> for <strong>{weekLabel}</strong></> : null}
-                  {' '}— select the ones to add:
+                  {' '}— select and edit before adding:
                 </p>
                 <div className="ai-entry-list">
                   {entries.map((entry, i) => {
                     const colors = ACTIVITY_COLORS[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
+                    const isEditing = editingIdx === i;
                     return (
-                      <label
+                      <div
                         key={i}
-                        className={`ai-entry-card${selected.has(i) ? ' selected' : ''}`}
+                        className={`ai-entry-card${selected.has(i) ? ' selected' : ''}${isEditing ? ' editing' : ''}`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selected.has(i)}
-                          onChange={() => toggleEntry(i)}
-                          className="ai-entry-check"
-                        />
-                        <div className="ai-entry-body">
-                          <span
-                            className="ai-entry-activity"
-                            style={entry.activity ? { background: colors.bg, borderColor: colors.border, color: colors.text } : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-faint)', fontStyle: 'italic' }}
+                        <label className="ai-entry-top">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(i)}
+                            onChange={() => toggleEntry(i)}
+                            className="ai-entry-check"
+                          />
+                          <div className="ai-entry-body">
+                            <span
+                              className="ai-entry-activity"
+                              style={entry.activity
+                                ? { background: colors.bg, borderColor: colors.border, color: colors.text }
+                                : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-faint)', fontStyle: 'italic' }}
+                            >
+                              {entry.activity || 'Unknown activity'}
+                            </span>
+                            <span className="ai-entry-time">
+                              {entry.day || <em style={{ fontStyle: 'italic', color: 'var(--text-faint)' }}>Unknown day</em>}
+                              {' · '}{formatTime(entry.start_time)}–{formatTime(entry.end_time)}
+                            </span>
+                            {entry.group_name && (
+                              <span className="ai-entry-meta">{entry.group_name}</span>
+                            )}
+                            {entry.facilitators.length > 0 && (
+                              <span className="ai-entry-meta">{entry.facilitators.join(', ')}</span>
+                            )}
+                            {entry.notes && (
+                              <span className="ai-entry-meta ai-entry-notes">{entry.notes}</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="ai-entry-edit-btn"
+                            onClick={(e) => { e.preventDefault(); setEditingIdx(isEditing ? null : i); }}
+                            aria-label={isEditing ? 'Close editor' : 'Edit entry'}
                           >
-                            {entry.activity || 'Unknown activity'}
-                          </span>
-                          <span className="ai-entry-time">
-                            {entry.day || <em style={{ fontStyle: 'italic', color: 'var(--text-faint)' }}>Unknown day</em>}
-                            {' · '}{formatTime(entry.start_time)}–{formatTime(entry.end_time)}
-                          </span>
-                          {entry.group_name && (
-                            <span className="ai-entry-meta">{entry.group_name}</span>
-                          )}
-                          {entry.facilitators.length > 0 && (
-                            <span className="ai-entry-meta">{entry.facilitators.join(', ')}</span>
-                          )}
-                          {entry.notes && (
-                            <span className="ai-entry-meta ai-entry-notes">{entry.notes}</span>
-                          )}
-                        </div>
-                      </label>
+                            {isEditing ? 'Done' : 'Edit'}
+                          </button>
+                        </label>
+
+                        {isEditing && (
+                          <div className="ai-entry-edit-form">
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Activity</label>
+                              <select
+                                className="ai-edit-select"
+                                value={entry.activity}
+                                onChange={(e) => updateEntry(i, { activity: e.target.value })}
+                              >
+                                <option value="">— unknown —</option>
+                                {ACTIVITIES.map(a => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Day</label>
+                              <select
+                                className="ai-edit-select"
+                                value={entry.day}
+                                onChange={(e) => updateEntry(i, { day: e.target.value })}
+                              >
+                                <option value="">— unknown —</option>
+                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Start</label>
+                              <select
+                                className="ai-edit-select"
+                                value={entry.start_time}
+                                onChange={(e) => {
+                                  const start = e.target.value;
+                                  const changes = { start_time: start };
+                                  if (entry.end_time <= start) {
+                                    const idx = TIME_OPTIONS.indexOf(start);
+                                    changes.end_time = TIME_OPTIONS[Math.min(idx + 4, TIME_OPTIONS.length - 1)];
+                                  }
+                                  updateEntry(i, changes);
+                                }}
+                              >
+                                {TIME_OPTIONS.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}
+                              </select>
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">End</label>
+                              <select
+                                className="ai-edit-select"
+                                value={entry.end_time}
+                                onChange={(e) => updateEntry(i, { end_time: e.target.value })}
+                              >
+                                {TIME_OPTIONS.filter(t => t > entry.start_time).map(t => (
+                                  <option key={t} value={t}>{formatTime(t)}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Group</label>
+                              <input
+                                type="text"
+                                className="ai-edit-input"
+                                value={entry.group_name}
+                                placeholder="Group / booking name"
+                                onChange={(e) => updateEntry(i, { group_name: e.target.value })}
+                              />
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Staff</label>
+                              <input
+                                type="text"
+                                className="ai-edit-input"
+                                value={entry.facilitators.join(', ')}
+                                placeholder="Names, comma-separated"
+                                onChange={(e) => updateEntry(i, {
+                                  facilitators: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+                                })}
+                              />
+                            </div>
+                            <div className="ai-edit-row">
+                              <label className="ai-edit-label">Notes</label>
+                              <input
+                                type="text"
+                                className="ai-edit-input"
+                                value={entry.notes}
+                                placeholder="Any additional notes"
+                                onChange={(e) => updateEntry(i, { notes: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -347,7 +456,7 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => { setStep('upload'); setEntries([]); setSelected(new Set()); }}
+                onClick={() => { setStep('upload'); setEntries([]); setSelected(new Set()); setEditingIdx(null); }}
               >
                 ← Back
               </button>

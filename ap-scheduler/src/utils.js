@@ -64,3 +64,25 @@ export function minutesToHHMM(mins) {
 export function roundToQuarter(mins) {
   return Math.round(mins / 15) * 15;
 }
+
+// Maps day names to their offset from the week-start (Saturday = 0).
+const DAY_OFFSETS = { Saturday: 0, Sunday: 1, Monday: 2, Tuesday: 3, Wednesday: 4, Thursday: 5, Friday: 6 };
+
+export function getDayDate(weekStart, dayName) {
+  const offset = DAY_OFFSETS[dayName];
+  if (offset === undefined) return null;
+  const d = new Date(weekStart + 'T00:00:00');
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+
+export function ordinal(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}

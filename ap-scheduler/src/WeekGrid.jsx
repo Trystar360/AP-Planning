@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
-import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter } from './utils';
+import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal } from './utils';
 
 const HOUR_PX = 60;
 const DAY_MIN = 8 * 60;
@@ -71,12 +71,21 @@ function packLanes(dayEntries) {
   return placements;
 }
 
-export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff, activityColors: activityColorsProp }) {
+export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff, activityColors: activityColorsProp }) {
   const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
-  const [mobileDay, setMobileDay] = useState(() => {
+  const [mobileDay, setMobileDayRaw] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ap:last-day');
+      if (saved && DAYS.includes(saved)) return saved;
+    } catch {}
     const today = todayDayName();
     return DAYS.includes(today) ? today : DAYS[0];
   });
+
+  const setMobileDay = (day) => {
+    setMobileDayRaw(day);
+    try { localStorage.setItem('ap:last-day', day); } catch {}
+  };
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
   );
@@ -105,6 +114,7 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
   };
 
   const conflicts = findConflicts(entries);
+  const conflictDays = new Set(entries.filter((e) => conflicts.has(e.id)).map((e) => e.day));
   const todayName = isCurrentWeek ? todayDayName() : null;
   const visibleDays = isMobile ? [mobileDay] : DAYS;
 
@@ -236,15 +246,18 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
           const count = dayEntryCount(d);
           const isActive = mobileDay === d;
           const isToday = d === todayName;
+          const hasConflict = conflictDays.has(d);
+          const dayDate = weekStart ? getDayDate(weekStart, d) : null;
           return (
             <button
               key={d}
-              className={`wsd${isActive ? ' active' : ''}${isToday ? ' today' : ''}`}
+              className={`wsd${isActive ? ' active' : ''}${isToday ? ' today' : ''}${hasConflict ? ' conflict-day' : ''}`}
               onClick={() => setMobileDay(d)}
               aria-pressed={isActive}
-              aria-label={`${d}${count > 0 ? `, ${count} activities` : ', no activities'}${isToday ? ', today' : ''}`}
+              aria-label={`${d}${dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}${count > 0 ? `, ${count} activities` : ', no activities'}${isToday ? ', today' : ''}${hasConflict ? ', has conflicts' : ''}`}
             >
               <span className="wsd-name">{d.slice(0, 3)}</span>
+              {dayDate && <span className="wsd-date">{dayDate.getDate()}</span>}
               <span className="wsd-dots">
                 {dots.map((c, i) => <span key={i} className="wsd-dot" style={{ background: c }} />)}
                 {dots.length === 0 && <span className="wsd-dot empty" />}
@@ -259,13 +272,16 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
       <div className="day-tabs">
         {DAYS.map((d) => {
           const count = dayEntryCount(d);
+          const hasConflict = conflictDays.has(d);
+          const dayDate = weekStart ? getDayDate(weekStart, d) : null;
           return (
             <button
               key={d}
-              className={`day-tab${mobileDay === d ? ' active' : ''}${d === todayName ? ' today-tab' : ''}`}
+              className={`day-tab${mobileDay === d ? ' active' : ''}${d === todayName ? ' today-tab' : ''}${hasConflict ? ' conflict-day' : ''}`}
               onClick={() => setMobileDay(d)}
             >
               <span className="day-tab-name">{d.slice(0, 3)}</span>
+              {dayDate && <span className="day-tab-date">{dayDate.getDate()}</span>}
               {count > 0 && <span className="day-tab-badge">{count}</span>}
             </button>
           );
@@ -284,11 +300,14 @@ export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCu
         style={{ gridTemplateColumns: `52px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
       >
         <div className="tl-corner" />
-        {visibleDays.map((d) => (
-          <div key={d} className={`tl-day-head${d === todayName ? ' today-col' : ''}`}>
-            {d}{d === todayName && <span className="today-dot" />}
-          </div>
-        ))}
+        {visibleDays.map((d) => {
+          const dayDate = weekStart ? getDayDate(weekStart, d) : null;
+          return (
+            <div key={d} className={`tl-day-head${d === todayName ? ' today-col' : ''}${conflictDays.has(d) ? ' conflict-col' : ''}`}>
+              {d}{dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}{d === todayName && <span className="today-dot" />}
+            </div>
+          );
+        })}
 
         <div className="tl-gutter" style={{ height: bodyHeight }}>
           {hourLabels.map((m) => (
