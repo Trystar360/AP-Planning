@@ -884,7 +884,7 @@ body {
   border-left: 1px solid transparent;
   font-size: 1rem;
   cursor: pointer;
-  opacity: 0.4;
+  opacity: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -892,7 +892,13 @@ body {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   transition: opacity var(--dur-fast), background var(--dur-fast);
 }
-.chip-delete:hover { opacity: 1; background: rgba(0,0,0,0.06); }
+.entry-chip:hover .chip-delete,
+.entry-chip:focus-within .chip-delete { opacity: 0.55; }
+.chip-delete:hover { opacity: 1 !important; background: rgba(0,0,0,0.06); }
+
+@media (max-width: 640px) {
+  .chip-delete { display: none; }
+}
 
 .chip-edit-hint {
   display: none;
@@ -1047,7 +1053,9 @@ body {
 
 .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; flex-wrap: wrap; align-items: center; }
+.modal-delete-btn { margin-right: auto; }
+.modal-delete-confirm { font-size: 0.85rem; color: var(--danger); margin-right: auto; font-weight: var(--fw-medium); }
 
 /* Facilitator fieldset */
 .facilitator-fieldset {
