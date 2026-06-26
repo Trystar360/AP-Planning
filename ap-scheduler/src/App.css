@@ -1767,6 +1767,10 @@ body {
     color: var(--text);
     font-size: 9pt;
     line-height: 1.35;
+    border: 1px solid var(--border-strong);
+    border-top: 3px solid var(--primary);
+    border-radius: 3px;
+    padding: 16px 18px;
   }
 
   .pv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
