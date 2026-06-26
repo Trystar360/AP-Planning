@@ -1511,6 +1511,21 @@ body {
 
 .ai-review-count { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.45; }
 
+.ai-new-activities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: -6px 0 14px;
+  padding: 8px 11px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+}
+.ai-new-activities-label { font-weight: 600; color: var(--accent-text); }
+.ai-new-activities-names { color: var(--text); }
+
 .ai-no-entries {
   text-align: center;
   padding: 28px 0 20px;
