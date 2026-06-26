@@ -839,22 +839,24 @@ body {
 .entry-chip.compact .chip-staff,
 .entry-chip.compact .chip-notes { font-size: 0.6rem; line-height: 1.2; }
 
-.chip-activity { font-weight: 700; font-size: 0.76rem; }
-.chip-group { font-size: 0.72rem; font-weight: 600; opacity: 0.85; }
-.chip-time { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.75; }
+.chip-activity { font-weight: 700; font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-group { font-size: 0.72rem; font-weight: 600; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-time { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip-duration { opacity: 0.85; }
 .chip-warning { margin-right: 3px; font-size: 0.72rem; }
 
 .chip-staff {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
   opacity: 0.9;
   font-size: 0.72rem;
+  overflow: hidden;
+  min-width: 0;
 }
-.chip-facilitator { display: inline-flex; align-items: center; gap: 3px; }
-.chip-notes { font-style: italic; opacity: 0.75; font-size: 0.69rem; }
+.chip-facilitator { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chip-notes { font-style: italic; opacity: 0.75; font-size: 0.69rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .entry-chip.conflict { outline: 2px solid var(--danger); outline-offset: -1px; }
 
