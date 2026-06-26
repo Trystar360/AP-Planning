@@ -4,6 +4,7 @@ import EntryModal from './EntryModal';
 import StaffPanel from './StaffPanel';
 import CopyModal from './CopyModal';
 import TemplatePanel from './TemplatePanel';
+import AIUploadModal from './AIUploadModal';
 import SummaryBar from './SummaryBar';
 import Toast from './Toast';
 import PrintView from './PrintView';
@@ -35,6 +36,7 @@ export default function App() {
   const [fullDay, setFullDay] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAIUpload, setShowAIUpload] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef();
 
@@ -135,6 +137,22 @@ export default function App() {
     if (!entries.length) { showToast('Nothing to export for this week.'); return; }
     if (kind === 'ics') exportICS(entries, weekStart);
     else exportCSV(entries, weekStart);
+  };
+
+  const handleAIImport = async (importedEntries) => {
+    setShowAIUpload(false);
+    if (!importedEntries.length) return;
+    let count = 0;
+    for (const entry of importedEntries) {
+      try {
+        await addEntry({ ...entry, week_start: weekStart });
+        count++;
+      } catch { /* skip if duplicate */ }
+    }
+    loadAll();
+    showToast(count
+      ? `Added ${count} ${count === 1 ? 'entry' : 'entries'} from AI import.`
+      : 'No new entries were added (possible duplicates).');
   };
 
   const handleDelete = async (id) => {
@@ -281,6 +299,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowAIUpload(true); }}>✦ AI Import…</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setCopyOpen(true); }}>⧉ Copy week…</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowTemplates(true); }}>Templates</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowStaff(true); }}>Facilitators</button>
@@ -390,6 +409,14 @@ export default function App() {
           onApply={handleApplyTemplate}
           onDelete={handleDeleteTemplate}
           onClose={() => setShowTemplates(false)}
+        />
+      )}
+
+      {showAIUpload && (
+        <AIUploadModal
+          weekLabel={formatWeekLabel(weekStart)}
+          onImport={handleAIImport}
+          onClose={() => setShowAIUpload(false)}
         />
       )}
 
