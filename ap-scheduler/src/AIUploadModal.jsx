@@ -153,10 +153,10 @@ async function analyzeFile(file) {
   try {
     raw = JSON.parse(text);
   } catch {
-    throw new Error('Claude returned an unexpected response. Please try again.');
+    throw new Error('Unexpected response from AI. Please try again.');
   }
 
-  if (!Array.isArray(raw)) throw new Error('Unexpected response format from Claude.');
+  if (!Array.isArray(raw)) throw new Error('Unexpected response format from AI.');
 
   return raw.map(e => {
     const start = normalizeTime(e.start_time);
@@ -308,7 +308,7 @@ export default function AIUploadModal({ weekLabel, onImport, onClose }) {
         {step === 'analyzing' && (
           <div className="ai-analyzing">
             <div className="ai-spinner" aria-hidden="true" />
-            <p className="ai-analyzing-text">Analyzing with Claude…</p>
+            <p className="ai-analyzing-text">Analyzing with AI…</p>
             <p className="ai-analyzing-sub">This usually takes a few seconds.</p>
           </div>
         )}
