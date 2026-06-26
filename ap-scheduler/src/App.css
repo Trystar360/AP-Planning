@@ -1253,8 +1253,9 @@ body {
 
   /* Week nav stacks: switcher row, then a compact controls row */
   .week-nav { gap: 8px; }
-  .week-switcher { flex: 1; }
-  .week-label { flex: 1; justify-content: center; }
+  .week-switcher { flex: 1; min-width: 0; overflow: hidden; }
+  .week-label { flex: 1; justify-content: center; min-width: 0; }
+  .this-week-badge { display: none; }
   .btn-today { flex-shrink: 0; }
 
   /* Filter takes the row; the two toggles share the next */
