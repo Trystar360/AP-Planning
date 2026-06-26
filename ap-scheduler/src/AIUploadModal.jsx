@@ -108,42 +108,14 @@ async function callAnthropic(file, base64, apiKey, activities) {
   return data.content?.[0]?.text || '[]';
 }
 
-async function callGemini(file, base64, apiKey, activities) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: file.type, data: base64 } },
-            { text: buildPrompt(activities) },
-          ],
-        }],
-        generationConfig: { maxOutputTokens: 2048 },
-      }),
-    },
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Gemini API error ${res.status}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-}
-
 async function analyzeFile(file, activities) {
   const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!anthropicKey && !geminiKey) {
-    throw new Error('No API key configured. Add VITE_ANTHROPIC_API_KEY or VITE_GEMINI_API_KEY to your .env file.');
+  if (!anthropicKey) {
+    throw new Error('No API key configured. Add VITE_ANTHROPIC_API_KEY to your .env file.');
   }
 
   const base64 = await fileToBase64(file);
-  const rawText = anthropicKey
-    ? await callAnthropic(file, base64, anthropicKey, activities)
-    : await callGemini(file, base64, geminiKey, activities);
+  const rawText = await callAnthropic(file, base64, anthropicKey, activities);
 
   const text = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
