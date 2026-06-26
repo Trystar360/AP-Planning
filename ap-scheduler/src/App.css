@@ -1753,3 +1753,99 @@ body {
   font-style: italic;
   color: var(--text-faint);
 }
+
+/* ── Activities Panel ── */
+.activities-list { max-height: 340px; }
+
+.activity-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: none;
+}
+
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.activity-chip-btn {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+  letter-spacing: 0.02em;
+}
+.activity-chip-btn:hover { opacity: 0.8; }
+
+.activity-name-text {
+  flex: 1;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.activity-name-text:hover { background: var(--border); }
+
+.activity-name-input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1.5px solid var(--primary);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-height: 34px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.activity-color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 6px;
+  background: var(--surface-2);
+  border-radius: 0 0 6px 6px;
+  border: 1px solid var(--border);
+  border-top: none;
+  margin-top: -2px;
+}
+
+.activity-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.activity-color-swatch:hover { transform: scale(1.2); }
+.activity-color-swatch.active {
+  box-shadow: 0 0 0 2px var(--primary);
+  transform: scale(1.15);
+}
+
+.activity-new-preview {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}

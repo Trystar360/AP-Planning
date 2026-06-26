@@ -1,6 +1,8 @@
 // Data layer — uses Supabase when VITE_SUPABASE_URL is set at build time,
 // otherwise falls back to localStorage so local dev works without credentials.
 
+import { ACTIVITIES, ACTIVITY_COLORS } from './constants';
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 const USE_SUPABASE = !!(SUPABASE_URL && SUPABASE_KEY);
@@ -124,9 +126,10 @@ const sb = {
 
 // ─── localStorage fallback ────────────────────────────────────────────────────
 
-const SCHEDULE_KEY = 'ap-scheduler:entries';
-const STAFF_KEY    = 'ap-scheduler:staff';
-const TEMPLATE_KEY = 'ap-scheduler:templates';
+const SCHEDULE_KEY  = 'ap-scheduler:entries';
+const STAFF_KEY     = 'ap-scheduler:staff';
+const TEMPLATE_KEY  = 'ap-scheduler:templates';
+const ACTIVITY_KEY  = 'ap-scheduler:activities';
 
 const uuid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -240,6 +243,21 @@ const ls = {
   },
 };
 
+// ─── Activities (always localStorage — app-level config, not per-user data) ───
+
+function getActivityStore() {
+  let a = lsRead(ACTIVITY_KEY, null);
+  if (!a) {
+    a = ACTIVITIES.map((name) => ({
+      id: uuid(),
+      name,
+      ...(ACTIVITY_COLORS[name] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' }),
+    }));
+    lsWrite(ACTIVITY_KEY, a);
+  }
+  return a;
+}
+
 // ─── Exports (same interface regardless of backend) ───────────────────────────
 
 const api = USE_SUPABASE ? sb : ls;
@@ -256,6 +274,34 @@ export const fetchTemplates = ()         => api.fetchTemplates();
 export const saveTemplate   = (n, e)     => api.saveTemplate(n, e);
 export const deleteTemplate = (id)       => api.deleteTemplate(id);
 export const applyTemplate  = (id, w)    => api.applyTemplate(id, w);
+
+export function fetchActivities() {
+  return resolve(getActivityStore());
+}
+
+export function saveActivity(name, colors) {
+  const activities = getActivityStore();
+  const activity = { id: uuid(), name, ...colors };
+  activities.push(activity);
+  lsWrite(ACTIVITY_KEY, activities);
+  return resolve(activity);
+}
+
+export function updateActivity(id, changes) {
+  const activities = getActivityStore();
+  const idx = activities.findIndex((a) => a.id === id);
+  if (idx !== -1) {
+    activities[idx] = { ...activities[idx], ...changes };
+    lsWrite(ACTIVITY_KEY, activities);
+    return resolve(activities[idx]);
+  }
+  return resolve(null);
+}
+
+export function deleteActivity(id) {
+  lsWrite(ACTIVITY_KEY, getActivityStore().filter((a) => a.id !== id));
+  return resolve();
+}
 
 // Exposed so the UI can show a "shared" badge when Supabase is active.
 export const isShared = USE_SUPABASE;

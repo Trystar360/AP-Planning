@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ACTIVITIES, DAYS, TIME_OPTIONS } from './constants';
+import { ACTIVITIES as DEFAULT_ACTIVITIES, DAYS, TIME_OPTIONS } from './constants';
 import { formatTime } from './utils';
 
 function addOneHour(t) {
@@ -14,10 +14,11 @@ function normFacilitators(entry) {
   return [];
 }
 
-export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, onClose, onOpenFacilitators }) {
+export default function EntryModal({ mode, entry, staff, activities: activitiesProp, onSave, onDuplicate, onClose, onOpenFacilitators }) {
+  const activityNames = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
-    activity: entry?.activity || ACTIVITIES[0],
+    activity: entry?.activity || activityNames[0],
     day: entry?.day || DAYS[0],
     start_time: defaultStart,
     end_time: entry?.end_time || addOneHour(defaultStart),
@@ -78,7 +79,7 @@ export default function EntryModal({ mode, entry, staff, onSave, onDuplicate, on
           <label>
             Activity
             <select value={form.activity} onChange={set('activity')}>
-              {ACTIVITIES.map((a) => <option key={a}>{a}</option>)}
+              {activityNames.map((a) => <option key={a}>{a}</option>)}
             </select>
           </label>
           <label>

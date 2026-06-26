@@ -1,4 +1,4 @@
-import { ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
+import { ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
 import { toMinutes, formatMinutes } from './utils';
 
 function getFacilitators(e) {
@@ -7,7 +7,8 @@ function getFacilitators(e) {
   return [];
 }
 
-export default function SummaryBar({ entries: allEntries, staff }) {
+export default function SummaryBar({ entries: allEntries, staff, activityColors: activityColorsProp }) {
+  const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
   const entries = allEntries.filter((e) => !e.cancelled);
   if (entries.length === 0) return null;
 
