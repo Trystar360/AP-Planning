@@ -1485,6 +1485,11 @@ body {
   line-height: 1.45;
 }
 
+.ai-upload-tip {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 .ai-upload-error {
   background: var(--danger-soft);
   border: 1px solid var(--danger-border);

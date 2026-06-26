@@ -96,7 +96,39 @@ CRITICAL: Extract each visible row exactly ONCE. Do not duplicate, repeat, or pa
 
 Only extract information that is actually present in the document. Do NOT guess or invent values — use "" or [] for fields that are not clearly stated.
 
-Return ONLY a JSON array. Return [] if no events are found. Output raw JSON only, no markdown fences, no explanation.`;
+Return a JSON object with an "events" array containing one object per distinct schedule row. Return an empty events array if no events are found.`;
+}
+
+// JSON schema the model's response is constrained to via output_config.format.
+// This guarantees the reply is valid JSON in our exact shape, eliminating the
+// parse-failure class entirely; extractEntries below is now a salvage backstop
+// for truncated (max_tokens) responses rather than the front line.
+function buildResponseSchema() {
+  return {
+    type: 'object',
+    properties: {
+      events: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            activity: { type: 'string' },
+            // Allow "" for rows whose day can't be determined.
+            day: { type: 'string', enum: [...DAYS, ''] },
+            start_time: { type: 'string' },
+            end_time: { type: 'string' },
+            group_name: { type: 'string' },
+            facilitators: { type: 'array', items: { type: 'string' } },
+            notes: { type: 'string' },
+          },
+          required: ['activity', 'day', 'start_time', 'end_time', 'group_name', 'facilitators', 'notes'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['events'],
+    additionalProperties: false,
+  };
 }
 
 async function callAnthropic(file, base64, apiKey, activities) {
@@ -116,6 +148,10 @@ async function callAnthropic(file, base64, apiKey, activities) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 8192,
+      // Constrain the reply to our exact JSON shape (GA, no beta header).
+      output_config: {
+        format: { type: 'json_schema', schema: buildResponseSchema() },
+      },
       messages: [{
         role: 'user',
         content: [fileBlock, { type: 'text', text: buildPrompt(activities) }],
@@ -130,16 +166,28 @@ async function callAnthropic(file, base64, apiKey, activities) {
   return { text: data.content?.[0]?.text || '[]', stopReason: data.stop_reason };
 }
 
-// Robustly extract a JSON array from the model's reply. Handles markdown
-// fences, surrounding prose, and arrays truncated mid-stream (e.g. when the
-// response hits the token limit) by salvaging the complete leading objects.
+// Coerce a parsed value to the events array. Structured outputs return
+// { events: [...] }; a bare array (legacy or salvage) is accepted too.
+function toEntries(v) {
+  if (Array.isArray(v)) return v;
+  if (v && Array.isArray(v.events)) return v.events;
+  return null;
+}
+
+// Robustly extract the events array from the model's reply. Structured outputs
+// make this a clean JSON.parse in the normal case; the recovery paths salvage
+// the events array from a response truncated mid-stream (e.g. when the response
+// hits the token limit) by keeping the complete leading objects.
 function extractEntries(text) {
   const t = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   try {
-    const v = JSON.parse(t);
-    if (Array.isArray(v)) return v;
+    const v = toEntries(JSON.parse(t));
+    if (v) return v;
   } catch { /* fall through to recovery */ }
 
+  // From here on we salvage the events array directly: its opening '[' is the
+  // first bracket in the payload (whether the reply is a bare array or the
+  // structured { "events": [ ... ] } object).
   const start = t.indexOf('[');
   if (start === -1) return null;
 
@@ -313,6 +361,9 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
           <h2 className="modal-title" id="ai-upload-title">AI Import</h2>
           <p className="ai-upload-subtitle">
             Upload a schedule image or PDF — Claude will extract the entries for you.
+            {step === 'upload' && (
+              <span className="ai-upload-tip"> For best results, upload the original PDF rather than a photo of a printout.</span>
+            )}
           </p>
 
           {error && <div className="ai-upload-error">{error}</div>}
