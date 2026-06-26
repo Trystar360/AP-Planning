@@ -72,6 +72,34 @@ export default function App() {
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
+  // Refresh when the tab becomes visible again or regains focus
+  useEffect(() => {
+    const onVisible = () => { if (!document.hidden) loadAll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', loadAll);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', loadAll);
+    };
+  }, [loadAll]);
+
+  // Poll every 15 s in Supabase (shared) mode so other users' changes appear
+  useEffect(() => {
+    if (!isShared) return;
+    const id = setInterval(loadAll, 15_000);
+    return () => clearInterval(id);
+  }, [loadAll]);
+
+  // Pick up changes made by other tabs when using localStorage
+  useEffect(() => {
+    if (isShared) return;
+    const onStorage = (e) => {
+      if (e.key?.startsWith('ap-scheduler:')) loadAll();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [loadAll]);
+
   const handleAdd = (day, start_time) => setModal({ mode: 'add', day, start_time });
   const handleEdit = (entry) => setModal({ mode: 'edit', entry });
 
