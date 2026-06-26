@@ -847,7 +847,7 @@ body {
 
 .chip-staff {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px 6px;
   opacity: 0.9;
