@@ -477,6 +477,8 @@ export default function App() {
         entries={entries}
         weekStart={weekStart}
         filterStaff={filterStaff}
+        staff={staff}
+        activityColors={activityColors}
       />
     </div>
   );
