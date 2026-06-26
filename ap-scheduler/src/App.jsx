@@ -463,7 +463,9 @@ export default function App() {
       {showAIUpload && (
         <AIUploadModal
           weekLabel={formatWeekLabel(weekStart)}
+          weekStart={weekStart}
           activities={activities}
+          staff={staff}
           onImport={handleAIImport}
           onClose={() => setShowAIUpload(false)}
         />
