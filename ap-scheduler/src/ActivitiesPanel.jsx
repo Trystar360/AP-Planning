@@ -17,6 +17,19 @@ const COLOR_PRESETS = [
 
 export { COLOR_PRESETS };
 
+// A distinct activity colour set for ANY index. The 12 curated presets come
+// first; past that we generate evenly-spread hues via the golden angle so
+// no two activities share a colour.
+export function activityColorForIndex(i) {
+  if (i < COLOR_PRESETS.length) return COLOR_PRESETS[i];
+  const hue = Math.round((i * 137.508) % 360);
+  return {
+    bg: `hsl(${hue}, 70%, 91%)`,
+    border: `hsl(${hue}, 58%, 52%)`,
+    text: `hsl(${hue}, 60%, 26%)`,
+  };
+}
+
 export default function ActivitiesPanel({ activities, onAdd, onUpdate, onDelete, onClose }) {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -30,7 +43,14 @@ export default function ActivitiesPanel({ activities, onAdd, onUpdate, onDelete,
   }, [onClose]);
 
   const usedBgs = new Set(activities.map((a) => a.bg));
-  const nextColor = COLOR_PRESETS.find((c) => !usedBgs.has(c.bg)) || COLOR_PRESETS[activities.length % COLOR_PRESETS.length];
+  let nextColor = COLOR_PRESETS.find((c) => !usedBgs.has(c.bg));
+  if (!nextColor) {
+    // All presets taken — generate further distinct colours until one is unused.
+    for (let i = COLOR_PRESETS.length; ; i++) {
+      const c = activityColorForIndex(i);
+      if (!usedBgs.has(c.bg)) { nextColor = c; break; }
+    }
+  }
 
   const handleAdd = (e) => {
     e.preventDefault();

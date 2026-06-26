@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
+import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
 import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal, initials } from './utils';
 
 function EntryInfoCard({ entry, activityColors, staff, onEdit, onDelete, onClose }) {
@@ -43,7 +43,7 @@ function EntryInfoCard({ entry, activityColors, staff, onEdit, onDelete, onClose
             {facilitators.length > 0
               ? facilitators.map((name) => (
                   <span key={name} className="info-card-facilitator">
-                    <span className="staff-dot" style={{ background: STAFF_PALETTE[staff.findIndex((s) => s.name === name) % STAFF_PALETTE.length] || STAFF_PALETTE[0] }} />
+                    <span className="staff-dot" style={{ background: staffColorByIndex(staff.findIndex((s) => s.name === name)) }} />
                     {name}
                   </span>
                 ))
@@ -74,8 +74,7 @@ function todayDayName() {
   return new Date().toLocaleDateString('en-GB', { weekday: 'long' });
 }
 function staffColor(name, staff) {
-  const idx = staff.findIndex((s) => s.name === name);
-  return STAFF_PALETTE[idx >= 0 ? idx % STAFF_PALETTE.length : 0];
+  return staffColorByIndex(staff.findIndex((s) => s.name === name));
 }
 function entryStart(e) { return toMinutes(e.start_time || e.time_slot || '00:00'); }
 function entryEnd(e) {
