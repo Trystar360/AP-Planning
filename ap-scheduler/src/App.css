@@ -1753,7 +1753,8 @@ body {
 
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { size: A4 portrait; margin: 14mm 12mm; }
+  @page { size: A4 portrait; margin: 9mm; }
+  html, body { background: #fff !important; }
 
   .app-header,
   .app-main,
@@ -1761,10 +1762,15 @@ body {
 
   .print-view {
     display: block;
+    background: #fff;
     font-family: var(--font-sans);
     color: var(--text);
     font-size: 9pt;
     line-height: 1.35;
+    border: 1px solid var(--border-strong);
+    border-top: 3px solid var(--primary);
+    border-radius: 3px;
+    padding: 16px 18px;
   }
 
   .pv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
@@ -1784,10 +1790,8 @@ body {
   .pv-week { font-family: var(--font-mono); font-size: 10pt; color: var(--primary); font-weight: 600; }
   .pv-header-right { text-align: right; }
   .pv-stats-row { display: flex; gap: 16px; justify-content: flex-end; margin-bottom: 6px; }
-  .pv-stat {
-    text-align: center; min-width: 52px; padding: 4px 8px;
-    background: var(--primary-soft); border: 1px solid var(--border); border-radius: 6px;
-  }
+  .pv-stat { text-align: center; min-width: 50px; padding: 0 8px; }
+  .pv-stat + .pv-stat { border-left: 1px solid var(--border-strong); }
   .pv-stat-value { display: block; font-family: var(--font-display); font-size: 15pt; font-weight: 700; color: var(--primary); line-height: 1.1; }
   .pv-stat-label { display: block; font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-top: 1px; }
   .pv-print-date { font-size: 7pt; color: var(--text-faint); }
@@ -1801,19 +1805,19 @@ body {
   .pv-day-count { font-size: 7.5pt; color: var(--accent-text); font-weight: 600; margin-left: auto; }
 
   .pv-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-  .pv-col-time    { width: 90px; }
-  .pv-col-activity { width: 110px; }
-  .pv-col-group   { width: 88px; }
-  .pv-col-dur     { width: 52px; }
+  .pv-col-time    { width: 88px; }
+  .pv-col-activity { width: 120px; }
+  .pv-col-group   { width: 84px; }
+  .pv-col-dur     { width: 50px; }
   .pv-col-fac     { width: 108px; }
 
   .pv-table thead th {
     font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--text-muted); background: var(--surface-2); padding: 3px 6px;
-    text-align: left; border-bottom: 1px solid var(--border-strong); border-top: 1px solid var(--border-strong);
+    color: var(--text-muted); background: #fff; padding: 3px 6px;
+    text-align: left; border-bottom: 1.5px solid var(--primary);
   }
   .pv-table tbody td { padding: 5px 6px; vertical-align: top; border-bottom: 0.5px solid var(--border); }
-  .pv-alt td { background: var(--surface-2); }
+  .pv-table tbody tr:last-child td { border-bottom: none; }
 
   .pv-time-cell { white-space: nowrap; color: var(--text-muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   .pv-time-start { font-weight: 600; color: var(--text); }
@@ -1821,11 +1825,12 @@ body {
   .pv-time-end { color: var(--text-muted); }
   .pv-act-cell { padding-left: 6px; }
   .pv-act-pill {
-    display: inline-block; font-weight: 600; font-size: 7.5pt;
-    padding: 1.5px 7px; border: 1px solid transparent; border-radius: 999px;
-    background: var(--surface-2); color: var(--text);
+    display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 7.5pt;
+    padding: 1.5px 8px 1.5px 6px; border: 1px solid var(--border-strong); border-radius: 999px;
+    background: #fff; color: var(--text); white-space: nowrap;
   }
-  .pv-act-pill-sm { font-size: 7pt; padding: 1px 6px; }
+  .pv-act-swatch { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--border-strong); }
+  .pv-act-pill-sm { font-size: 7pt; padding: 1px 7px 1px 5px; }
   .pv-dur-cell { white-space: nowrap; text-align: center; font-family: var(--font-mono); color: var(--text-muted); }
   .pv-notes-cell { color: var(--text-muted); font-style: italic; }
 
@@ -1835,8 +1840,8 @@ body {
 
   .pv-cancelled-tag {
     display: inline-block; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.06em;
-    font-weight: 700; padding: 1px 4px; background: var(--danger-soft); color: var(--danger-text);
-    border-radius: 3px; margin-left: 5px; vertical-align: middle;
+    font-weight: 700; padding: 0.5px 4px; background: #fff; color: var(--danger-text);
+    border: 1px solid var(--danger-border); border-radius: 3px; margin-left: 5px; vertical-align: middle;
   }
   .pv-cancelled td { text-decoration: line-through; opacity: 0.55; }
   .pv-cancelled .pv-cancelled-tag,
@@ -1854,7 +1859,7 @@ body {
   .pv-sum-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
   .pv-sum-table th {
     font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-muted); background: var(--surface-2); padding: 3px 5px; text-align: left; border-bottom: 1px solid var(--border); }
+    color: var(--text-muted); background: #fff; padding: 3px 5px; text-align: left; border-bottom: 1px solid var(--border-strong); }
   .pv-sum-table td { padding: 3px 5px; border-bottom: 0.5px solid var(--border); }
   .pv-sum-table td:nth-child(2),
   .pv-sum-table td:nth-child(3) { text-align: center; font-family: var(--font-mono); color: var(--text-muted); }

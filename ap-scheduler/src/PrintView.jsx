@@ -166,8 +166,9 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
                         <td className="pv-act-cell">
                           <span
                             className="pv-act-pill"
-                            style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text } : {}}
+                            style={colors ? { borderColor: colors.border, color: colors.text } : {}}
                           >
+                            <span className="pv-act-swatch" style={colors ? { background: colors.border } : {}} />
                             {entry.activity}
                           </span>
                           {cancelled && <span className="pv-cancelled-tag">Cancelled</span>}
@@ -206,8 +207,9 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
                           <td>
                             <span
                               className="pv-act-pill pv-act-pill-sm"
-                              style={c ? { background: c.bg, borderColor: c.border, color: c.text } : {}}
+                              style={c ? { borderColor: c.border, color: c.text } : {}}
                             >
+                              <span className="pv-act-swatch" style={c ? { background: c.border } : {}} />
                               {a.activity}
                             </span>
                           </td>
