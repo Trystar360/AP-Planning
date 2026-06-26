@@ -62,13 +62,26 @@ function fileToBase64(file) {
   });
 }
 
-async function analyzeFile(file) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('VITE_ANTHROPIC_API_KEY is not configured. Add it to your .env file.');
+function buildPrompt() {
+  return `Extract all schedule/activity booking entries from this document.
 
-  const base64 = await fileToBase64(file);
+Valid activities (use exact names): ${ACTIVITIES.join(', ')}
+Valid days: ${DAYS.join(', ')}
+
+Return ONLY a JSON array. Each item:
+- activity: exact match from valid activities above
+- day: exact match from valid days above
+- start_time: "HH:MM" 24h format, between 08:00 and 21:00
+- end_time: "HH:MM" 24h format, must be after start_time, max 21:00
+- group_name: string (empty string if none)
+- facilitators: array of name strings (empty array if none)
+- notes: string (empty string if none)
+
+Return [] if no entries found. Output raw JSON only, no markdown fences, no explanation.`;
+}
+
+async function callAnthropic(file, base64, apiKey) {
   const isImage = file.type.startsWith('image/');
-
   const fileBlock = isImage
     ? { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } }
     : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
@@ -85,48 +98,65 @@ async function analyzeFile(file) {
       max_tokens: 2048,
       messages: [{
         role: 'user',
-        content: [
-          fileBlock,
-          {
-            type: 'text',
-            text: `Extract all schedule/activity booking entries from this document.
-
-Valid activities (use exact names): ${ACTIVITIES.join(', ')}
-Valid days: ${DAYS.join(', ')}
-
-Return ONLY a JSON array. Each item:
-- activity: exact match from valid activities above
-- day: exact match from valid days above
-- start_time: "HH:MM" 24h format, between 08:00 and 21:00
-- end_time: "HH:MM" 24h format, must be after start_time, max 21:00
-- group_name: string (empty string if none)
-- facilitators: array of name strings (empty array if none)
-- notes: string (empty string if none)
-
-Return [] if no entries found. Output raw JSON only, no markdown fences, no explanation.`,
-          },
-        ],
+        content: [fileBlock, { type: 'text', text: buildPrompt() }],
       }],
     }),
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
   }
-
   const data = await res.json();
-  const text = (data.content?.[0]?.text || '[]')
-    .replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  return data.content?.[0]?.text || '[]';
+}
+
+async function callGemini(file, base64, apiKey) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: file.type, data: base64 } },
+            { text: buildPrompt() },
+          ],
+        }],
+        generationConfig: { maxOutputTokens: 2048 },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Gemini API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+}
+
+async function analyzeFile(file) {
+  const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!anthropicKey && !geminiKey) {
+    throw new Error('No API key configured. Add VITE_ANTHROPIC_API_KEY or VITE_GEMINI_API_KEY to your .env file.');
+  }
+
+  const base64 = await fileToBase64(file);
+  const rawText = anthropicKey
+    ? await callAnthropic(file, base64, anthropicKey)
+    : await callGemini(file, base64, geminiKey);
+
+  const text = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
   let raw;
   try {
     raw = JSON.parse(text);
   } catch {
-    throw new Error('Claude returned an unexpected response. Please try again.');
+    throw new Error('Unexpected response from AI. Please try again.');
   }
 
-  if (!Array.isArray(raw)) throw new Error('Unexpected response format from Claude.');
+  if (!Array.isArray(raw)) throw new Error('Unexpected response format from AI.');
 
   return raw.map(e => {
     const start = normalizeTime(e.start_time);
@@ -278,7 +308,7 @@ export default function AIUploadModal({ weekLabel, onImport, onClose }) {
         {step === 'analyzing' && (
           <div className="ai-analyzing">
             <div className="ai-spinner" aria-hidden="true" />
-            <p className="ai-analyzing-text">Analyzing with Claude…</p>
+            <p className="ai-analyzing-text">Analyzing with AI…</p>
             <p className="ai-analyzing-sub">This usually takes a few seconds.</p>
           </div>
         )}
