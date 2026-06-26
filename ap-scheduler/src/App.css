@@ -850,7 +850,7 @@ body {
 
 .chip-staff {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 3px 6px;
   margin-top: 1px;
