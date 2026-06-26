@@ -14,7 +14,7 @@ function normFacilitators(entry) {
   return [];
 }
 
-export default function EntryModal({ mode, entry, staff, activities: activitiesProp, weekStart, onSave, onDuplicate, onClose, onOpenFacilitators }) {
+export default function EntryModal({ mode, entry, staff, activities: activitiesProp, weekStart, onSave, onDuplicate, onDelete, onClose, onOpenFacilitators }) {
   const activityNames = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
@@ -62,6 +62,8 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
     onSave(form);
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const startOptions = TIME_OPTIONS.filter((t) => t < '21:00');
   const endOptions = TIME_OPTIONS.filter((t) => t > form.start_time);
 
@@ -74,6 +76,7 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
         aria-labelledby="entry-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
+        <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">×</button>
         <h2 className="modal-title" id="entry-modal-title">{mode === 'edit' ? 'Edit Entry' : 'Add Entry'}</h2>
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
@@ -164,11 +167,25 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
             </label>
           )}
           <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            {mode === 'edit' && onDuplicate && (
-              <button type="button" className="btn-secondary" onClick={() => onDuplicate(form)}>Duplicate</button>
+            {mode === 'edit' && onDelete && !confirmDelete && (
+              <button type="button" className="btn-danger-sm modal-delete-btn" onClick={() => setConfirmDelete(true)}>Delete</button>
             )}
-            <button type="submit" className="btn-primary">Save</button>
+            {mode === 'edit' && onDelete && confirmDelete && (
+              <>
+                <span className="modal-delete-confirm">Delete this entry?</span>
+                <button type="button" className="btn-secondary" onClick={() => setConfirmDelete(false)}>No</button>
+                <button type="button" className="btn-danger-sm" onClick={onDelete}>Yes, delete</button>
+              </>
+            )}
+            {!confirmDelete && (
+              <>
+                <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+                {mode === 'edit' && onDuplicate && (
+                  <button type="button" className="btn-secondary" onClick={() => onDuplicate(form)}>Duplicate</button>
+                )}
+                <button type="submit" className="btn-primary">Save</button>
+              </>
+            )}
           </div>
         </form>
       </div>

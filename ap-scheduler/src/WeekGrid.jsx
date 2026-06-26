@@ -184,6 +184,14 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
     const isConflict = conflicts.has(e.id);
     const isDimmed = filterStaff && !facilitators.includes(filterStaff);
     const compact = height < 44;
+    const tooltip = [
+      e.activity,
+      e.group_name,
+      timeRange,
+      facilitators.join(', '),
+      e.notes,
+      e.cancelled ? 'Cancelled' : '',
+    ].filter(Boolean).join(' · ');
 
     return (
       <div
@@ -192,6 +200,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
         style={{ background: colors.bg, borderColor: colors.border, color: colors.text, top, height, width, left }}
         role="button"
         tabIndex={0}
+        title={tooltip}
         aria-label={`Edit ${e.activity}${e.group_name ? `, ${e.group_name}` : ''}, ${timeRange}, ${facilitators.join(', ') || 'Unassigned'}${e.cancelled ? ', cancelled' : ''}`}
         onClick={(ev) => { ev.stopPropagation(); onEdit(e); }}
         onKeyDown={(ev) => {
@@ -203,23 +212,21 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
           {e.activity}
           {e.cancelled && <span className="chip-cancelled-tag">cancelled</span>}
         </span>
-        {!compact && e.group_name && <span className="chip-group">{e.group_name}</span>}
-        {!compact && timeRange && (
-          <span className="chip-time">{timeRange}{dur && <span className="chip-duration"> · {dur}</span>}</span>
+        {e.group_name && <span className="chip-group">{e.group_name}</span>}
+        {timeRange && (
+          <span className="chip-time">{timeRange}{!compact && dur && <span className="chip-duration"> · {dur}</span>}</span>
         )}
-        {!compact && (
-          <span className="chip-staff">
-            {facilitators.length > 0
-              ? facilitators.map((name) => (
-                  <span key={name} className="chip-facilitator">
-                    <span className="staff-dot" style={{ background: staffColor(name, staff) }} />
-                    {name}
-                  </span>
-                ))
-              : <em>Unassigned</em>}
-          </span>
-        )}
-        {!compact && e.notes && <span className="chip-notes">{e.notes}</span>}
+        <span className="chip-staff">
+          {facilitators.length > 0
+            ? facilitators.map((name) => (
+                <span key={name} className="chip-facilitator">
+                  <span className="staff-dot" style={{ background: staffColor(name, staff) }} />
+                  {name}
+                </span>
+              ))
+            : <em>Unassigned</em>}
+        </span>
+        {e.notes && <span className="chip-notes">{e.notes}</span>}
         <span className="chip-edit-hint" aria-hidden="true">✏</span>
         <button
           className="chip-delete"

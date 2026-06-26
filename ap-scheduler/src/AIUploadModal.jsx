@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ACTIVITIES as DEFAULT_ACTIVITIES, DAYS, TIME_OPTIONS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS } from './constants';
 import { formatTime } from './utils';
+import EntryModal from './EntryModal';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
@@ -150,7 +151,7 @@ async function analyzeFile(file, activities) {
   });
 }
 
-export default function AIUploadModal({ weekLabel, activities: activitiesProp, onImport, onClose }) {
+export default function AIUploadModal({ weekLabel, weekStart, activities: activitiesProp, staff = [], onImport, onClose }) {
   const ACTIVITIES = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
   const ACTIVITY_COLORS = activitiesProp?.length
     ? Object.fromEntries(activitiesProp.map((a) => [a.name, { bg: a.bg, border: a.border, text: a.text }]))
@@ -166,10 +167,12 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
   const inputRef = useRef();
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => {
+      if (e.key === 'Escape' && editingIdx === null) onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, editingIdx]);
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
@@ -222,103 +225,102 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal ai-upload-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-upload-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="modal-title" id="ai-upload-title">AI Import</h2>
-        <p className="ai-upload-subtitle">
-          Upload a schedule image or PDF — Claude will extract the entries for you.
-        </p>
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className="modal ai-upload-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ai-upload-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="modal-title" id="ai-upload-title">AI Import</h2>
+          <p className="ai-upload-subtitle">
+            Upload a schedule image or PDF — Claude will extract the entries for you.
+          </p>
 
-        {error && <div className="ai-upload-error">{error}</div>}
+          {error && <div className="ai-upload-error">{error}</div>}
 
-        {step === 'upload' && (
-          <>
-            <div
-              className={`ai-dropzone${dragging ? ' dragging' : ''}${file ? ' has-file' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
-              aria-label="Upload file"
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*,.pdf"
-                className="ai-file-input"
-                onChange={(e) => acceptFile(e.target.files?.[0])}
-              />
-              {preview ? (
-                <img src={preview} alt="Schedule preview" className="ai-preview-img" />
-              ) : file ? (
-                <div className="ai-file-selected">
-                  <span className="ai-file-icon">📄</span>
-                  <span className="ai-file-name">{file.name}</span>
-                  <span className="ai-file-hint">Click to replace</span>
+          {step === 'upload' && (
+            <>
+              <div
+                className={`ai-dropzone${dragging ? ' dragging' : ''}${file ? ' has-file' : ''}`}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => inputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
+                aria-label="Upload file"
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="ai-file-input"
+                  onChange={(e) => acceptFile(e.target.files?.[0])}
+                />
+                {preview ? (
+                  <img src={preview} alt="Schedule preview" className="ai-preview-img" />
+                ) : file ? (
+                  <div className="ai-file-selected">
+                    <span className="ai-file-icon">📄</span>
+                    <span className="ai-file-name">{file.name}</span>
+                    <span className="ai-file-hint">Click to replace</span>
+                  </div>
+                ) : (
+                  <div className="ai-dropzone-prompt">
+                    <span className="ai-dropzone-icon" aria-hidden="true">⬆</span>
+                    <span className="ai-dropzone-main">Drop a file here, or click to browse</span>
+                    <span className="ai-dropzone-sub">JPEG · PNG · GIF · WebP · PDF</span>
+                  </div>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={!file}
+                  onClick={handleAnalyze}
+                >
+                  Analyze with AI ✦
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'analyzing' && (
+            <div className="ai-analyzing">
+              <div className="ai-spinner" aria-hidden="true" />
+              <p className="ai-analyzing-text">Analyzing with AI…</p>
+              <p className="ai-analyzing-sub">This usually takes a few seconds.</p>
+            </div>
+          )}
+
+          {step === 'review' && (
+            <>
+              {entries.length === 0 ? (
+                <div className="ai-no-entries">
+                  <p>No schedule entries were found in this file.</p>
+                  <p>Try a different image or PDF with clearer schedule information.</p>
                 </div>
               ) : (
-                <div className="ai-dropzone-prompt">
-                  <span className="ai-dropzone-icon" aria-hidden="true">⬆</span>
-                  <span className="ai-dropzone-main">Drop a file here, or click to browse</span>
-                  <span className="ai-dropzone-sub">JPEG · PNG · GIF · WebP · PDF</span>
-                </div>
-              )}
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!file}
-                onClick={handleAnalyze}
-              >
-                Analyze with AI ✦
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === 'analyzing' && (
-          <div className="ai-analyzing">
-            <div className="ai-spinner" aria-hidden="true" />
-            <p className="ai-analyzing-text">Analyzing with AI…</p>
-            <p className="ai-analyzing-sub">This usually takes a few seconds.</p>
-          </div>
-        )}
-
-        {step === 'review' && (
-          <>
-            {entries.length === 0 ? (
-              <div className="ai-no-entries">
-                <p>No schedule entries were found in this file.</p>
-                <p>Try a different image or PDF with clearer schedule information.</p>
-              </div>
-            ) : (
-              <>
-                <p className="ai-review-count">
-                  Found <strong>{entries.length}</strong> {entries.length === 1 ? 'entry' : 'entries'}
-                  {weekLabel ? <> for <strong>{weekLabel}</strong></> : null}
-                  {' '}— select and edit before adding:
-                </p>
-                <div className="ai-entry-list">
-                  {entries.map((entry, i) => {
-                    const colors = ACTIVITY_COLORS[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
-                    const isEditing = editingIdx === i;
-                    return (
-                      <div
-                        key={i}
-                        className={`ai-entry-card${selected.has(i) ? ' selected' : ''}${isEditing ? ' editing' : ''}`}
-                      >
-                        <label className="ai-entry-top">
+                <>
+                  <p className="ai-review-count">
+                    Found <strong>{entries.length}</strong> {entries.length === 1 ? 'entry' : 'entries'}
+                    {weekLabel ? <> for <strong>{weekLabel}</strong></> : null}
+                    {' '}— select and edit before adding:
+                  </p>
+                  <div className="ai-entry-list">
+                    {entries.map((entry, i) => {
+                      const colors = ACTIVITY_COLORS[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
+                      return (
+                        <label
+                          key={i}
+                          className={`ai-entry-card${selected.has(i) ? ' selected' : ''}`}
+                        >
                           <input
                             type="checkbox"
                             checked={selected.has(i)}
@@ -351,129 +353,55 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
                           <button
                             type="button"
                             className="ai-entry-edit-btn"
-                            onClick={(e) => { e.preventDefault(); setEditingIdx(isEditing ? null : i); }}
-                            aria-label={isEditing ? 'Close editor' : 'Edit entry'}
+                            onClick={(e) => { e.preventDefault(); setEditingIdx(i); }}
+                            aria-label="Edit entry"
                           >
-                            {isEditing ? 'Done' : 'Edit'}
+                            Edit
                           </button>
                         </label>
-
-                        {isEditing && (
-                          <div className="ai-entry-edit-form">
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Activity</label>
-                              <select
-                                className="ai-edit-select"
-                                value={entry.activity}
-                                onChange={(e) => updateEntry(i, { activity: e.target.value })}
-                              >
-                                <option value="">— unknown —</option>
-                                {ACTIVITIES.map(a => <option key={a} value={a}>{a}</option>)}
-                              </select>
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Day</label>
-                              <select
-                                className="ai-edit-select"
-                                value={entry.day}
-                                onChange={(e) => updateEntry(i, { day: e.target.value })}
-                              >
-                                <option value="">— unknown —</option>
-                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                              </select>
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Start</label>
-                              <select
-                                className="ai-edit-select"
-                                value={entry.start_time}
-                                onChange={(e) => {
-                                  const start = e.target.value;
-                                  const changes = { start_time: start };
-                                  if (entry.end_time <= start) {
-                                    const idx = TIME_OPTIONS.indexOf(start);
-                                    changes.end_time = TIME_OPTIONS[Math.min(idx + 4, TIME_OPTIONS.length - 1)];
-                                  }
-                                  updateEntry(i, changes);
-                                }}
-                              >
-                                {TIME_OPTIONS.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}
-                              </select>
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">End</label>
-                              <select
-                                className="ai-edit-select"
-                                value={entry.end_time}
-                                onChange={(e) => updateEntry(i, { end_time: e.target.value })}
-                              >
-                                {TIME_OPTIONS.filter(t => t > entry.start_time).map(t => (
-                                  <option key={t} value={t}>{formatTime(t)}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Group</label>
-                              <input
-                                type="text"
-                                className="ai-edit-input"
-                                value={entry.group_name}
-                                placeholder="Group / booking name"
-                                onChange={(e) => updateEntry(i, { group_name: e.target.value })}
-                              />
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Staff</label>
-                              <input
-                                type="text"
-                                className="ai-edit-input"
-                                value={entry.facilitators.join(', ')}
-                                placeholder="Names, comma-separated"
-                                onChange={(e) => updateEntry(i, {
-                                  facilitators: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                                })}
-                              />
-                            </div>
-                            <div className="ai-edit-row">
-                              <label className="ai-edit-label">Notes</label>
-                              <input
-                                type="text"
-                                className="ai-edit-input"
-                                value={entry.notes}
-                                placeholder="Any additional notes"
-                                onChange={(e) => updateEntry(i, { notes: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => { setStep('upload'); setEntries([]); setSelected(new Set()); setEditingIdx(null); }}
-              >
-                ← Back
-              </button>
-              {entries.length > 0 && (
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              <div className="modal-actions">
                 <button
                   type="button"
-                  className="btn-primary"
-                  disabled={selected.size === 0}
-                  onClick={handleImport}
+                  className="btn-secondary"
+                  onClick={() => { setStep('upload'); setEntries([]); setSelected(new Set()); setEditingIdx(null); }}
                 >
-                  Add {selected.size} {selected.size === 1 ? 'entry' : 'entries'}
+                  ← Back
                 </button>
-              )}
-            </div>
-          </>
-        )}
+                {entries.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={selected.size === 0}
+                    onClick={handleImport}
+                  >
+                    Add {selected.size} {selected.size === 1 ? 'entry' : 'entries'}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      {editingIdx !== null && (
+        <EntryModal
+          mode="edit"
+          entry={entries[editingIdx]}
+          staff={staff}
+          activities={activitiesProp}
+          weekStart={weekStart}
+          onSave={(form) => {
+            updateEntry(editingIdx, form);
+            setEditingIdx(null);
+          }}
+          onClose={() => setEditingIdx(null)}
+        />
+      )}
+    </>
   );
 }

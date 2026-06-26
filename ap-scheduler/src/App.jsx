@@ -56,17 +56,21 @@ export default function App() {
     if (action) await action();
   };
 
+  const loadedWeek = useRef(null);
+
   const loadAll = useCallback(async () => {
-    setLoading(true);
+    const freshWeek = loadedWeek.current !== weekStart;
+    if (freshWeek) setLoading(true);
     setError('');
     try {
       const [s, e] = await Promise.all([fetchStaff(), fetchSchedule(weekStart)]);
       setStaff(s);
       setEntries(e);
+      loadedWeek.current = weekStart;
     } catch {
       setError('Could not load schedule data.');
     } finally {
-      setLoading(false);
+      if (freshWeek) setLoading(false);
     }
   }, [weekStart]);
 
@@ -411,6 +415,7 @@ export default function App() {
           weekStart={weekStart}
           onSave={handleSave}
           onDuplicate={handleDuplicate}
+          onDelete={modal.mode === 'edit' ? () => { setModal(null); handleDelete(modal.entry.id); } : undefined}
           onClose={() => setModal(null)}
           onOpenFacilitators={() => { setModal(null); setShowStaff(true); }}
         />
@@ -458,7 +463,9 @@ export default function App() {
       {showAIUpload && (
         <AIUploadModal
           weekLabel={formatWeekLabel(weekStart)}
+          weekStart={weekStart}
           activities={activities}
+          staff={staff}
           onImport={handleAIImport}
           onClose={() => setShowAIUpload(false)}
         />
