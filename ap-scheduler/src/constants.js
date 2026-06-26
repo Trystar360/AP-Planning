@@ -1,7 +1,13 @@
 // Colour palette assigned to staff members in order (wraps if > 8 members).
 export const STAFF_PALETTE = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e',
-  '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6',
+  '#c0492f', // rust
+  '#cf8b3c', // amber
+  '#7e9444', // olive
+  '#3f8f6b', // jade
+  '#3f93a6', // teal
+  '#5b85bd', // lake
+  '#8268b3', // violet
+  '#bf5a78', // berry
 ];
 
 export const ACTIVITIES = [
@@ -36,11 +42,11 @@ export const TIME_OPTIONS = (() => {
 })();
 
 export const ACTIVITY_COLORS = {
-  'Zip Line':       { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
-  'Mini Zip Line':  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0c4a6e' },
-  'Climbing Wall':  { bg: '#dcfce7', border: '#22c55e', text: '#14532d' },
-  'Climbing Tower': { bg: '#d1fae5', border: '#10b981', text: '#064e3b' },
-  'Laser Tag':      { bg: '#fce7f3', border: '#ec4899', text: '#831843' },
-  'Power Swing':    { bg: '#fef3c7', border: '#f59e0b', text: '#78350f' },
-  'Sky Trail':      { bg: '#ede9fe', border: '#8b5cf6', text: '#4c1d95' },
+  'Zip Line':       { bg: '#dde6f1', border: '#5b85bd', text: '#2c4a78' },
+  'Mini Zip Line':  { bg: '#d8e9ec', border: '#3f93a6', text: '#1f5560' },
+  'Climbing Wall':  { bg: '#dceadf', border: '#4e9067', text: '#265840' },
+  'Climbing Tower': { bg: '#e3ead3', border: '#7e9444', text: '#4c5a1f' },
+  'Laser Tag':      { bg: '#f1dee4', border: '#bf5a78', text: '#7c2f45' },
+  'Power Swing':    { bg: '#f6e6cf', border: '#cf8b3c', text: '#7d4d17' },
+  'Sky Trail':      { bg: '#e6def0', border: '#8268b3', text: '#4a3673' },
 };
