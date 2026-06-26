@@ -113,7 +113,7 @@ async function callAnthropic(file, base64, apiKey, activities) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: 8192,
       messages: [{
         role: 'user',
         content: [fileBlock, { type: 'text', text: buildPrompt(activities) }],
@@ -125,7 +125,41 @@ async function callAnthropic(file, base64, apiKey, activities) {
     throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
   }
   const data = await res.json();
-  return data.content?.[0]?.text || '[]';
+  return { text: data.content?.[0]?.text || '[]', stopReason: data.stop_reason };
+}
+
+// Robustly extract a JSON array from the model's reply. Handles markdown
+// fences, surrounding prose, and arrays truncated mid-stream (e.g. when the
+// response hits the token limit) by salvaging the complete leading objects.
+function extractEntries(text) {
+  const t = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try {
+    const v = JSON.parse(t);
+    if (Array.isArray(v)) return v;
+  } catch { /* fall through to recovery */ }
+
+  const start = t.indexOf('[');
+  if (start === -1) return null;
+
+  // Try the substring between the first '[' and the last ']'.
+  const end = t.lastIndexOf(']');
+  if (end > start) {
+    try {
+      const v = JSON.parse(t.slice(start, end + 1));
+      if (Array.isArray(v)) return v;
+    } catch { /* fall through */ }
+  }
+
+  // Salvage a truncated array: keep everything up to the last complete object.
+  const frag = t.slice(start);
+  const lastObj = frag.lastIndexOf('}');
+  if (lastObj !== -1) {
+    try {
+      const v = JSON.parse(`${frag.slice(0, lastObj + 1)}]`);
+      if (Array.isArray(v)) return v;
+    } catch { /* give up */ }
+  }
+  return null;
 }
 
 async function analyzeFile(file, activities) {
@@ -135,18 +169,15 @@ async function analyzeFile(file, activities) {
   }
 
   const base64 = await fileToBase64(file);
-  const rawText = await callAnthropic(file, base64, anthropicKey, activities);
+  const { text: rawText, stopReason } = await callAnthropic(file, base64, anthropicKey, activities);
 
-  const text = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-  let raw;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw new Error('Unexpected response from AI. Please try again.');
+  const raw = extractEntries(rawText);
+  if (!raw) {
+    if (import.meta.env.DEV) console.error('AI import: could not parse response', rawText);
+    throw new Error(stopReason === 'max_tokens'
+      ? 'This document has too many entries to read in one go. Try a single page or a clearer crop.'
+      : 'Unexpected response from AI. Please try again.');
   }
-
-  if (!Array.isArray(raw)) throw new Error('Unexpected response format from AI.');
 
   return raw.map(e => {
     const start = normalizeTime(e.start_time) || '09:00';
