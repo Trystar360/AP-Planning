@@ -76,6 +76,7 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
         aria-labelledby="entry-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
+        <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">×</button>
         <h2 className="modal-title" id="entry-modal-title">{mode === 'edit' ? 'Edit Entry' : 'Add Entry'}</h2>
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
