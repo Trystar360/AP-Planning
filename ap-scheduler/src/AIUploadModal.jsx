@@ -92,6 +92,8 @@ For each event found, return a JSON object with:
 
 Treat each individual time row as its own event, even when several rows share the same group heading or repeat the same activity across consecutive time slots.
 
+CRITICAL: Extract each visible row exactly ONCE. Do not duplicate, repeat, or pad the list — the number of objects you return must equal the number of distinct schedule rows actually visible in the document. If you are unsure, return fewer rows rather than repeating any.
+
 Only extract information that is actually present in the document. Do NOT guess or invent values — use "" or [] for fields that are not clearly stated.
 
 Return ONLY a JSON array. Return [] if no events are found. Output raw JSON only, no markdown fences, no explanation.`;
@@ -112,7 +114,7 @@ async function callAnthropic(file, base64, apiKey, activities) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       messages: [{
         role: 'user',
@@ -179,12 +181,18 @@ async function analyzeFile(file, activities) {
       : 'Unexpected response from AI. Please try again.');
   }
 
-  return raw.map(e => {
+  const MIN_SLOTS = 2; // 2 × 15 min = 30 min minimum duration
+
+  const mapped = raw.map(e => {
     const start = normalizeTime(e.start_time) || '09:00';
+    const startIdx = TIME_OPTIONS.indexOf(start);
     let end = normalizeTime(e.end_time);
     if (!end || end <= start) {
-      const startIdx = TIME_OPTIONS.indexOf(start);
       end = TIME_OPTIONS[Math.min(startIdx + 4, TIME_OPTIONS.length - 1)];
+    }
+    // Enforce a minimum duration so imported entries are tall enough to read.
+    if (TIME_OPTIONS.indexOf(end) - startIdx < MIN_SLOTS) {
+      end = TIME_OPTIONS[Math.min(startIdx + MIN_SLOTS, TIME_OPTIONS.length - 1)];
     }
     return {
       activity: normalizeActivity(e.activity, activities),
@@ -195,6 +203,18 @@ async function analyzeFile(file, activities) {
       facilitators: Array.isArray(e.facilitators) ? e.facilitators : [],
       notes: e.notes || '',
     };
+  });
+
+  // Drop exact-duplicate rows — guards against the model repeating entries.
+  const seen = new Set();
+  return mapped.filter((e) => {
+    const key = [
+      e.activity, e.day, e.start_time, e.end_time,
+      e.group_name, e.facilitators.join(','), e.notes,
+    ].join('|').toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
