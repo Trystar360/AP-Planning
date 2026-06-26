@@ -6,6 +6,7 @@ import CopyModal from './CopyModal';
 import TemplatePanel from './TemplatePanel';
 import SummaryBar from './SummaryBar';
 import Toast from './Toast';
+import PrintView from './PrintView';
 import {
   fetchSchedule, addEntry, updateEntry, deleteEntry,
   fetchStaff, addStaff, deleteStaff, copyWeek,
@@ -13,7 +14,6 @@ import {
   isShared,
 } from './api';
 import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
-import { ACTIVITY_COLORS } from './constants';
 import { exportICS, exportCSV } from './exporters';
 import './App.css';
 
@@ -198,10 +198,6 @@ export default function App() {
   const isCurrentWeek = weekStart === currentWeek;
   const printTitle = filterStaff ? `Print ${filterStaff}'s rota` : 'Print schedule';
 
-  // Smart legend — only show activities actually scheduled this week.
-  const presentActivities = [...new Set(entries.map((e) => e.activity))]
-    .filter((a) => ACTIVITY_COLORS[a]);
-
   useEffect(() => {
     if (!exportOpen) return undefined;
     const close = () => setExportOpen(false);
@@ -220,7 +216,13 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-top">
-          <h1>AP Scheduler {isShared && <span className="shared-badge">● Live</span>}</h1>
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">AP</span>
+            <div className="brand-text">
+              <h1>AP Scheduler</h1>
+              {isShared && <span className="shared-badge"><span className="shared-dot" />Live sync</span>}
+            </div>
+          </div>
           <div className="header-actions" onClick={(e) => e.stopPropagation()}>
             <button
               className="btn-icon menu-toggle"
@@ -251,6 +253,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <button className="btn-secondary" onClick={() => { setMenuOpen(false); setCopyOpen(true); }}>⧉ Copy week…</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowTemplates(true); }}>Templates</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowStaff(true); }}>Facilitators</button>
             </div>
@@ -258,28 +261,16 @@ export default function App() {
         </div>
 
         <div className="week-nav">
-          <button className="nav-btn" onClick={prevWeek} aria-label="Previous week">‹</button>
-          <div className="week-label">
-            <span className="week-range">{formatWeekLabel(weekStart)}</span>
-            {isCurrentWeek && <span className="this-week-badge">This week</span>}
-          </div>
-          <button className="nav-btn" onClick={nextWeek} aria-label="Next week">›</button>
-          {!isCurrentWeek && <button className="btn-ghost" onClick={goToday}>Today</button>}
-        </div>
-
-        <div className="header-controls">
-          {presentActivities.length > 0 && (
-            <div className="legend">
-              {presentActivities.map((a) => {
-                const c = ACTIVITY_COLORS[a];
-                return (
-                  <span key={a} className="legend-item" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                    {a}
-                  </span>
-                );
-              })}
+          <div className="week-switcher">
+            <button className="nav-btn" onClick={prevWeek} aria-label="Previous week">‹</button>
+            <div className="week-label">
+              <span className="week-range">{formatWeekLabel(weekStart)}</span>
+              {isCurrentWeek && <span className="this-week-badge">This week</span>}
             </div>
-          )}
+            <button className="nav-btn" onClick={nextWeek} aria-label="Next week">›</button>
+          </div>
+          {!isCurrentWeek && <button className="btn-today" onClick={goToday}>Today</button>}
+
           <div className="toolbar">
             <select
               className="staff-filter"
@@ -290,28 +281,26 @@ export default function App() {
               <option value="">All facilitators</option>
               {staff.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
-            <label className="toggle-label">
+            <label className="toggle-label" title="Show the full 8am–9pm day instead of just busy hours">
               <input
                 type="checkbox"
                 checked={fullDay}
                 onChange={(e) => setFullDay(e.target.checked)}
               />
-              Show all hours
+              All hours
             </label>
-            <button className="btn-secondary" onClick={() => setShowSummary((v) => !v)}>
-              {showSummary ? 'Hide summary' : 'Show summary'}
-            </button>
-            <button className="btn-copy" onClick={() => setCopyOpen(true)} title="Copy this week's schedule to another week">
-              Copy week…
+            <button className="btn-secondary" onClick={() => setShowSummary((v) => !v)} title="Show or hide the weekly totals">
+              {showSummary ? 'Hide totals' : 'Show totals'}
             </button>
           </div>
+        </div>
+
         {filterStaff && (
           <div className="filter-active-bar">
-            <span>Showing <strong>{filterStaff}</strong> only</span>
-            <button className="btn-ghost filter-clear" onClick={() => setFilterStaff('')}>✕ Clear filter</button>
+            <span>Showing <strong>{filterStaff}</strong>'s shifts only</span>
+            <button className="btn-ghost filter-clear" onClick={() => setFilterStaff('')}>✕ Clear</button>
           </div>
         )}
-        </div>
       </header>
 
       <main className="app-main">
@@ -377,6 +366,12 @@ export default function App() {
       )}
 
       <Toast toast={toast} onAction={runToastAction} onDismiss={dismissToast} />
+
+      <PrintView
+        entries={entries}
+        weekStart={weekStart}
+        filterStaff={filterStaff}
+      />
     </div>
   );
 }
