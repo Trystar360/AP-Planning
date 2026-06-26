@@ -1,4 +1,6 @@
-// Colour palette assigned to staff members in order (wraps if > 8 members).
+// Colour palette assigned to staff members in order. The first 8 use this
+// curated set; beyond that, staffColorByIndex() generates further distinct
+// hues so any number of facilitators stay visually distinct.
 export const STAFF_PALETTE = [
   '#c0492f', // rust
   '#cf8b3c', // amber
@@ -9,6 +11,16 @@ export const STAFF_PALETTE = [
   '#8268b3', // violet
   '#bf5a78', // berry
 ];
+
+// A distinct colour for the Nth facilitator, for ANY N. The curated palette
+// covers the first 8; past that we walk the hue wheel by the golden angle
+// (137.5°), which keeps successive hues far apart so colours never repeat.
+export function staffColorByIndex(index) {
+  const i = index >= 0 ? index : 0;
+  if (i < STAFF_PALETTE.length) return STAFF_PALETTE[i];
+  const hue = Math.round((i * 137.508) % 360);
+  return `hsl(${hue}, 52%, 42%)`;
+}
 
 export const ACTIVITIES = [
   'Zip Line',

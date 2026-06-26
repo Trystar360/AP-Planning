@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { STAFF_PALETTE } from './constants';
+import { staffColorByIndex } from './constants';
 
 export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
   const [name, setName] = useState('');
@@ -42,7 +42,7 @@ export default function StaffPanel({ staff, onAdd, onDelete, onClose }) {
           {staff.map((s, i) => (
             <li key={s.id} className="staff-item">
               <span className="staff-item-name">
-                <span className="staff-color-dot" style={{ background: STAFF_PALETTE[i % STAFF_PALETTE.length] }} />
+                <span className="staff-color-dot" style={{ background: staffColorByIndex(i) }} />
                 {s.name}
               </span>
               <button className="btn-danger-sm" onClick={() => onDelete(s.id)}>Remove</button>

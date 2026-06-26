@@ -1,4 +1,4 @@
-import { ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
+import { ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
 import { toMinutes, formatMinutes } from './utils';
 
 function getFacilitators(e) {
@@ -29,10 +29,7 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
     });
   });
 
-  const staffColor = (name) => {
-    const idx = staff.findIndex((s) => s.name === name);
-    return STAFF_PALETTE[idx >= 0 ? idx % STAFF_PALETTE.length : 0];
-  };
+  const staffColor = (name) => staffColorByIndex(staff.findIndex((s) => s.name === name));
 
   const activities = Object.entries(byActivity).sort((a, b) => b[1] - a[1]);
   const people = Object.entries(byFacilitator).sort((a, b) => b[1].mins - a[1].mins);
