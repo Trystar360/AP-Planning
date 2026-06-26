@@ -4,53 +4,52 @@ import { formatTime } from './utils';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
-function normalizeActivity(str) {
-  if (!str) return ACTIVITIES[0];
-  const s = str.trim().toLowerCase();
-  const exact = ACTIVITIES.find(a => a.toLowerCase() === s);
+function normalizeActivity(str, activities) {
+  if (!str) return '';
+  const s = str.trim();
+  if (!s) return '';
+  const sl = s.toLowerCase();
+  const exact = activities.find(a => a.toLowerCase() === sl);
   if (exact) return exact;
-  const partial = ACTIVITIES.find(a => s.includes(a.toLowerCase()) || a.toLowerCase().includes(s));
+  const partial = activities.find(a => sl.includes(a.toLowerCase()) || a.toLowerCase().includes(sl));
   if (partial) return partial;
-  if (s.includes('zip') && (s.includes('mini') || s.includes('small'))) return 'Mini Zip Line';
-  if (s.includes('zip')) return 'Zip Line';
-  if (s.includes('climb') && s.includes('tower')) return 'Climbing Tower';
-  if (s.includes('climb')) return 'Climbing Wall';
-  if (s.includes('laser')) return 'Laser Tag';
-  if (s.includes('swing')) return 'Power Swing';
-  if (s.includes('sky') || s.includes('trail')) return 'Sky Trail';
-  return ACTIVITIES[0];
+  if (sl.includes('zip') && (sl.includes('mini') || sl.includes('small'))) return 'Mini Zip Line';
+  if (sl.includes('zip')) return 'Zip Line';
+  if (sl.includes('climb') && sl.includes('tower')) return 'Climbing Tower';
+  if (sl.includes('climb')) return 'Climbing Wall';
+  if (sl.includes('laser')) return 'Laser Tag';
+  if (sl.includes('swing')) return 'Power Swing';
+  if (sl.includes('sky') || sl.includes('trail')) return 'Sky Trail';
+  return s; // keep the raw string rather than silently defaulting
 }
 
 function normalizeDay(str) {
-  if (!str) return DAYS[0];
+  if (!str) return '';
   const s = str.trim().toLowerCase();
-  return DAYS.find(d => d.toLowerCase().startsWith(s.slice(0, 3))) || DAYS[0];
+  return DAYS.find(d => d.toLowerCase().startsWith(s.slice(0, 3))) || '';
 }
 
 function normalizeTime(str) {
-  if (!str) return '09:00';
+  if (!str) return '';
   const s = str.trim().toLowerCase();
   let h, m;
-  const match12 = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/);
+  const match12 = s.match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)$/);
   if (match12) {
     h = parseInt(match12[1]);
-    m = parseInt(match12[2]);
+    m = parseInt(match12[2] || '0');
     if (match12[3] === 'pm' && h !== 12) h += 12;
     if (match12[3] === 'am' && h === 12) h = 0;
   } else {
     const match24 = s.match(/^(\d{1,2}):(\d{2})$/);
-    if (match24) {
-      h = parseInt(match24[1]);
-      m = parseInt(match24[2]);
-    }
+    if (match24) { h = parseInt(match24[1]); m = parseInt(match24[2]); }
   }
-  if (h === undefined) return '09:00';
+  if (h === undefined) return '';
   h = Math.max(8, Math.min(21, h));
-  m = Math.round(m / 15) * 15;
+  m = Math.round((m || 0) / 15) * 15;
   if (m >= 60) { m = 0; h = Math.min(21, h + 1); }
   if (h === 21) m = 0;
   const candidate = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  return TIME_OPTIONS.includes(candidate) ? candidate : '09:00';
+  return TIME_OPTIONS.includes(candidate) ? candidate : '';
 }
 
 function fileToBase64(file) {
@@ -62,25 +61,24 @@ function fileToBase64(file) {
   });
 }
 
-function buildPrompt() {
-  return `Extract all schedule/activity booking entries from this document.
+function buildPrompt(activities) {
+  return `Extract all scheduled events or activity bookings from this image or document. The document can be in any format: screenshot, photo, handwritten note, text message, email, table, calendar, or anything else.
 
-Valid activities (use exact names): ${ACTIVITIES.join(', ')}
-Valid days: ${DAYS.join(', ')}
+For each event found, return a JSON object with:
+- activity: name of the activity or event (if it matches one of these, use the exact name: ${activities.join(', ')}; otherwise use whatever name appears; use "" if not mentioned)
+- day: day of week — one of: ${DAYS.join(', ')} (use "" if not found or unclear)
+- start_time: start time as "HH:MM" in 24-hour format, between 08:00 and 21:00 (use "" if not found)
+- end_time: end time as "HH:MM" in 24-hour format, after start_time (use "" if not found)
+- group_name: group name, class name, or booking reference (use "" if none)
+- facilitators: array of staff, instructor, or facilitator name strings (use [] if none mentioned)
+- notes: any other relevant details (use "" if none)
 
-Return ONLY a JSON array. Each item:
-- activity: exact match from valid activities above
-- day: exact match from valid days above
-- start_time: "HH:MM" 24h format, between 08:00 and 21:00
-- end_time: "HH:MM" 24h format, must be after start_time, max 21:00
-- group_name: string (empty string if none)
-- facilitators: array of name strings (empty array if none)
-- notes: string (empty string if none)
+Only extract information that is actually present in the document. Do NOT guess or invent values — use "" or [] for fields that are not clearly stated.
 
-Return [] if no entries found. Output raw JSON only, no markdown fences, no explanation.`;
+Return ONLY a JSON array. Return [] if no events are found. Output raw JSON only, no markdown fences, no explanation.`;
 }
 
-async function callAnthropic(file, base64, apiKey) {
+async function callAnthropic(file, base64, apiKey, activities) {
   const isImage = file.type.startsWith('image/');
   const fileBlock = isImage
     ? { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } }
@@ -98,7 +96,7 @@ async function callAnthropic(file, base64, apiKey) {
       max_tokens: 2048,
       messages: [{
         role: 'user',
-        content: [fileBlock, { type: 'text', text: buildPrompt() }],
+        content: [fileBlock, { type: 'text', text: buildPrompt(activities) }],
       }],
     }),
   });
@@ -110,7 +108,7 @@ async function callAnthropic(file, base64, apiKey) {
   return data.content?.[0]?.text || '[]';
 }
 
-async function callGemini(file, base64, apiKey) {
+async function callGemini(file, base64, apiKey, activities) {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
@@ -120,7 +118,7 @@ async function callGemini(file, base64, apiKey) {
         contents: [{
           parts: [
             { inline_data: { mime_type: file.type, data: base64 } },
-            { text: buildPrompt() },
+            { text: buildPrompt(activities) },
           ],
         }],
         generationConfig: { maxOutputTokens: 2048 },
@@ -135,7 +133,7 @@ async function callGemini(file, base64, apiKey) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
 }
 
-async function analyzeFile(file) {
+async function analyzeFile(file, activities) {
   const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
   const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!anthropicKey && !geminiKey) {
@@ -144,8 +142,8 @@ async function analyzeFile(file) {
 
   const base64 = await fileToBase64(file);
   const rawText = anthropicKey
-    ? await callAnthropic(file, base64, anthropicKey)
-    : await callGemini(file, base64, geminiKey);
+    ? await callAnthropic(file, base64, anthropicKey, activities)
+    : await callGemini(file, base64, geminiKey, activities);
 
   const text = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
@@ -159,14 +157,14 @@ async function analyzeFile(file) {
   if (!Array.isArray(raw)) throw new Error('Unexpected response format from AI.');
 
   return raw.map(e => {
-    const start = normalizeTime(e.start_time);
+    const start = normalizeTime(e.start_time) || '09:00';
     let end = normalizeTime(e.end_time);
-    if (end <= start) {
+    if (!end || end <= start) {
       const startIdx = TIME_OPTIONS.indexOf(start);
       end = TIME_OPTIONS[Math.min(startIdx + 4, TIME_OPTIONS.length - 1)];
     }
     return {
-      activity: normalizeActivity(e.activity),
+      activity: normalizeActivity(e.activity, activities),
       day: normalizeDay(e.day),
       start_time: start,
       end_time: end,
@@ -221,7 +219,7 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
     setStep('analyzing');
     setError('');
     try {
-      const results = await analyzeFile(file);
+      const results = await analyzeFile(file, ACTIVITIES);
       setEntries(results);
       setSelected(new Set(results.map((_, i) => i)));
       setStep('review');
@@ -348,12 +346,13 @@ export default function AIUploadModal({ weekLabel, activities: activitiesProp, o
                         <div className="ai-entry-body">
                           <span
                             className="ai-entry-activity"
-                            style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}
+                            style={entry.activity ? { background: colors.bg, borderColor: colors.border, color: colors.text } : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-faint)', fontStyle: 'italic' }}
                           >
-                            {entry.activity}
+                            {entry.activity || 'Unknown activity'}
                           </span>
                           <span className="ai-entry-time">
-                            {entry.day} · {formatTime(entry.start_time)}–{formatTime(entry.end_time)}
+                            {entry.day || <em style={{ fontStyle: 'italic', color: 'var(--text-faint)' }}>Unknown day</em>}
+                            {' · '}{formatTime(entry.start_time)}–{formatTime(entry.end_time)}
                           </span>
                           {entry.group_name && (
                             <span className="ai-entry-meta">{entry.group_name}</span>
