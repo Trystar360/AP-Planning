@@ -21,7 +21,7 @@ function formatMins(mins) {
   return h ? `${h}h` : `${m}m`;
 }
 
-export default function PrintView({ entries, staff, weekStart, filterStaff }) {
+export default function PrintView({ entries, weekStart, filterStaff }) {
   const filtered = filterStaff
     ? entries.filter((e) => getFacilitators(e).includes(filterStaff))
     : entries;
