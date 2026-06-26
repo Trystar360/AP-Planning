@@ -847,15 +847,14 @@ body {
 
 .chip-staff {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 2px 6px;
   opacity: 0.9;
   font-size: 0.72rem;
   overflow: hidden;
-  min-width: 0;
 }
-.chip-facilitator { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chip-facilitator { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .chip-notes { font-style: italic; opacity: 0.75; font-size: 0.69rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .entry-chip.conflict { outline: 2px solid var(--danger); outline-offset: -1px; }
@@ -1027,6 +1026,62 @@ body {
   transition: background var(--dur-fast), color var(--dur-fast);
 }
 .modal-close-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* ── Entry info card ── */
+.info-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: var(--shadow-modal);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.info-card-activity {
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 32px;
+}
+.info-card-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.info-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 1px;
+}
+.info-card-dur { color: var(--text-muted); }
+.info-card-staff { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.info-card-facilitator { display: inline-flex; align-items: center; gap: 4px; font-size: 0.88rem; }
+.info-card-unassigned { color: var(--text-faint); }
+.info-card-notes { font-style: italic; color: var(--text-muted); }
+.info-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+}
 
 .modal-title {
   font-family: var(--font-display);

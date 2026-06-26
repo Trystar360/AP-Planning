@@ -2,6 +2,69 @@ import { useState, useEffect, useRef } from 'react';
 import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
 import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal } from './utils';
 
+function EntryInfoCard({ entry, activityColors, staff, onEdit, onDelete, onClose }) {
+  const colors = activityColors[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
+  const facilitators = getFacilitators(entry);
+  const timeRange = entry.start_time && entry.end_time
+    ? `${formatTime(entry.start_time)} – ${formatTime(entry.end_time)}`
+    : '';
+  const dur = durationLabel(entry.start_time, entry.end_time);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="info-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close-btn" onClick={onClose} type="button" aria-label="Close">×</button>
+        <div
+          className="info-card-activity"
+          style={{ background: colors.bg, borderColor: colors.border, color: colors.text }}
+        >
+          {entry.activity || 'Unknown activity'}
+          {entry.cancelled && <span className="chip-cancelled-tag">cancelled</span>}
+        </div>
+        <div className="info-card-row">
+          <span className="info-card-label">When</span>
+          <span>{entry.day}{timeRange ? ` · ${timeRange}` : ''}{dur ? <span className="info-card-dur"> · {dur}</span> : ''}</span>
+        </div>
+        {entry.group_name && (
+          <div className="info-card-row">
+            <span className="info-card-label">Group</span>
+            <span>{entry.group_name}</span>
+          </div>
+        )}
+        <div className="info-card-row">
+          <span className="info-card-label">Staff</span>
+          <span className="info-card-staff">
+            {facilitators.length > 0
+              ? facilitators.map((name) => (
+                  <span key={name} className="info-card-facilitator">
+                    <span className="staff-dot" style={{ background: STAFF_PALETTE[staff.findIndex((s) => s.name === name) % STAFF_PALETTE.length] || STAFF_PALETTE[0] }} />
+                    {name}
+                  </span>
+                ))
+              : <em className="info-card-unassigned">Unassigned</em>}
+          </span>
+        </div>
+        {entry.notes && (
+          <div className="info-card-row">
+            <span className="info-card-label">Notes</span>
+            <span className="info-card-notes">{entry.notes}</span>
+          </div>
+        )}
+        <div className="info-card-actions">
+          <button className="btn-danger-sm" type="button" onClick={onDelete}>Delete</button>
+          <button className="btn-primary" type="button" onClick={onEdit}>Edit</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const HOUR_PX = 60;
 const DAY_MIN = 8 * 60;
 const DAY_MAX = 21 * 60;
@@ -73,6 +136,7 @@ function packLanes(dayEntries) {
 
 export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff, activityColors: activityColorsProp }) {
   const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
+  const [viewEntry, setViewEntry] = useState(null);
   const [mobileDay, setMobileDayRaw] = useState(() => {
     try {
       const saved = localStorage.getItem('ap:last-day');
@@ -201,10 +265,10 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
         role="button"
         tabIndex={0}
         title={tooltip}
-        aria-label={`Edit ${e.activity}${e.group_name ? `, ${e.group_name}` : ''}, ${timeRange}, ${facilitators.join(', ') || 'Unassigned'}${e.cancelled ? ', cancelled' : ''}`}
-        onClick={(ev) => { ev.stopPropagation(); onEdit(e); }}
+        aria-label={`View ${e.activity}${e.group_name ? `, ${e.group_name}` : ''}, ${timeRange}, ${facilitators.join(', ') || 'Unassigned'}${e.cancelled ? ', cancelled' : ''}`}
+        onClick={(ev) => { ev.stopPropagation(); setViewEntry(e); }}
         onKeyDown={(ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); onEdit(e); }
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); setViewEntry(e); }
         }}
       >
         <span className="chip-activity">
@@ -227,7 +291,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
             : <em>Unassigned</em>}
         </span>
         {e.notes && <span className="chip-notes">{e.notes}</span>}
-        <span className="chip-edit-hint" aria-hidden="true">✏</span>
+        <span className="chip-edit-hint" aria-hidden="true">↗</span>
         <button
           className="chip-delete"
           onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
@@ -371,6 +435,17 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
       >
         +
       </button>
+
+      {viewEntry && (
+        <EntryInfoCard
+          entry={viewEntry}
+          activityColors={ACTIVITY_COLORS}
+          staff={staff}
+          onEdit={() => { onEdit(viewEntry); setViewEntry(null); }}
+          onDelete={() => { onDelete(viewEntry.id); setViewEntry(null); }}
+          onClose={() => setViewEntry(null)}
+        />
+      )}
     </div>
   );
 }
