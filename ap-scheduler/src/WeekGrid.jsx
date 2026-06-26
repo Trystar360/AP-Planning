@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
-import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal } from './utils';
+import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal, initials } from './utils';
 
 function EntryInfoCard({ entry, activityColors, staff, onEdit, onDelete, onClose }) {
   const colors = activityColors[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
@@ -241,6 +241,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
     const height = Math.max(MIN_CHIP_PX, yFor(entryEnd(e)) - top);
     const width = `calc(${100 / lanes}% - 4px)`;
     const left = `calc(${(100 / lanes) * lane}% + 2px)`;
+    const startLabel = e.start_time ? formatTime(e.start_time) : e.time_slot ? formatTime(e.time_slot) : '';
     const timeRange = e.start_time && e.end_time
       ? `${formatTime(e.start_time)} – ${formatTime(e.end_time)}`
       : e.time_slot ? formatTime(e.time_slot) : '';
@@ -276,22 +277,17 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
           {e.activity}
           {e.cancelled && <span className="chip-cancelled-tag">cancelled</span>}
         </span>
-        {e.group_name && <span className="chip-group">{e.group_name}</span>}
-        {timeRange && (
-          <span className="chip-time-line">
-            <span className="chip-time">{timeRange}</span>
-            {!compact && dur && <span className="chip-duration"> · {dur}</span>}
-          </span>
-        )}
-        <span className="chip-staff">
+        {!compact && e.group_name && <span className="chip-group">{e.group_name}</span>}
+        {startLabel && <span className="chip-time">{startLabel}</span>}
+        <span className={`chip-staff${compact ? ' avatars-only' : ''}`}>
           {facilitators.length > 0
             ? facilitators.map((name) => (
-                <span key={name} className="chip-facilitator">
-                  <span className="staff-dot" style={{ background: staffColor(name, staff) }} />
-                  {name}
+                <span key={name} className="chip-facilitator" title={name}>
+                  <span className="chip-avatar" style={{ background: staffColor(name, staff) }}>{initials(name)}</span>
+                  {!compact && <span className="chip-facilitator-name">{name}</span>}
                 </span>
               ))
-            : <em>Unassigned</em>}
+            : <em className="chip-unassigned">Unassigned</em>}
         </span>
         {e.notes && <span className="chip-notes">{e.notes}</span>}
         <span className="chip-edit-hint" aria-hidden="true">↗</span>
