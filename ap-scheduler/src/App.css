@@ -841,8 +841,9 @@ body {
 
 .chip-activity { font-weight: 700; font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip-group { font-size: 0.72rem; font-weight: 600; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chip-time { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chip-duration { opacity: 0.85; }
+.chip-time-line { display: flex; align-items: baseline; overflow: hidden; min-width: 0; white-space: nowrap; }
+.chip-time { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+.chip-duration { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.65; white-space: nowrap; flex-shrink: 0; }
 .chip-warning { margin-right: 3px; font-size: 0.72rem; }
 
 .chip-staff {
@@ -862,7 +863,8 @@ body {
 .entry-chip.cancelled { opacity: 0.55; filter: grayscale(0.6); }
 .entry-chip.cancelled .chip-activity,
 .entry-chip.cancelled .chip-group,
-.entry-chip.cancelled .chip-time { text-decoration: line-through; }
+.entry-chip.cancelled .chip-time,
+.entry-chip.cancelled .chip-duration { text-decoration: line-through; }
 
 .chip-cancelled-tag {
   margin-left: 5px;
