@@ -4,6 +4,7 @@ import EntryModal from './EntryModal';
 import StaffPanel from './StaffPanel';
 import CopyModal from './CopyModal';
 import TemplatePanel from './TemplatePanel';
+import ActivitiesPanel from './ActivitiesPanel';
 import AIUploadModal from './AIUploadModal';
 import SummaryBar from './SummaryBar';
 import Toast from './Toast';
@@ -12,6 +13,7 @@ import {
   fetchSchedule, addEntry, updateEntry, deleteEntry,
   fetchStaff, addStaff, deleteStaff, copyWeek,
   fetchTemplates, saveTemplate, deleteTemplate, applyTemplate,
+  fetchActivities, saveActivity, updateActivity, deleteActivity,
   isShared,
 } from './api';
 import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
@@ -35,6 +37,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [fullDay, setFullDay] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [showActivities, setShowActivities] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAIUpload, setShowAIUpload] = useState(false);
   const [toast, setToast] = useState(null);
@@ -71,8 +75,14 @@ export default function App() {
     catch { /* templates table may not exist yet — feature stays inert */ }
   }, []);
 
+  const loadActivities = useCallback(async () => {
+    try { setActivities(await fetchActivities()); }
+    catch { /* non-fatal */ }
+  }, []);
+
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  useEffect(() => { loadActivities(); }, [loadActivities]);
 
   // Refresh when the tab becomes visible again or regains focus
   useEffect(() => {
@@ -153,6 +163,21 @@ export default function App() {
     showToast(count
       ? `Added ${count} ${count === 1 ? 'entry' : 'entries'} from AI import.`
       : 'No new entries were added (possible duplicates).');
+  };
+
+  const handleAddActivity = async (name, colors) => {
+    const activity = await saveActivity(name, colors);
+    setActivities((prev) => [...prev, activity]);
+  };
+
+  const handleUpdateActivity = async (id, changes) => {
+    await updateActivity(id, changes);
+    setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ...changes } : a)));
+  };
+
+  const handleDeleteActivity = async (id) => {
+    await deleteActivity(id);
+    setActivities((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleDelete = async (id) => {
@@ -243,6 +268,9 @@ export default function App() {
 
   const isCurrentWeek = weekStart === currentWeek;
   const printTitle = filterStaff ? `Print ${filterStaff}'s rota` : 'Print schedule';
+  const activityColors = Object.fromEntries(
+    activities.map((a) => [a.name, { bg: a.bg, border: a.border, text: a.text }])
+  );
 
   useEffect(() => {
     if (!exportOpen) return undefined;
@@ -299,6 +327,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowActivities(true); }}>Activities</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowAIUpload(true); }}>✦ AI Import…</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setCopyOpen(true); }}>⧉ Copy week…</button>
               <button className="btn-secondary" onClick={() => { setMenuOpen(false); setShowTemplates(true); }}>Templates</button>
@@ -356,7 +385,7 @@ export default function App() {
           <div className="loading">Loading…</div>
         ) : (
           <>
-            {showSummary && <SummaryBar entries={entries} staff={staff} />}
+            {showSummary && <SummaryBar entries={entries} staff={staff} activityColors={activityColors} />}
             <WeekGrid
               entries={entries}
               staff={staff}
@@ -366,6 +395,7 @@ export default function App() {
               isCurrentWeek={isCurrentWeek}
               fullDay={fullDay}
               filterStaff={filterStaff}
+              activityColors={activityColors}
             />
           </>
         )}
@@ -376,6 +406,7 @@ export default function App() {
           mode={modal.mode}
           entry={modal.mode === 'edit' ? modal.entry : { day: modal.day, start_time: modal.start_time }}
           staff={staff}
+          activities={activities}
           onSave={handleSave}
           onDuplicate={handleDuplicate}
           onClose={() => setModal(null)}
@@ -412,9 +443,20 @@ export default function App() {
         />
       )}
 
+      {showActivities && (
+        <ActivitiesPanel
+          activities={activities}
+          onAdd={handleAddActivity}
+          onUpdate={handleUpdateActivity}
+          onDelete={handleDeleteActivity}
+          onClose={() => setShowActivities(false)}
+        />
+      )}
+
       {showAIUpload && (
         <AIUploadModal
           weekLabel={formatWeekLabel(weekStart)}
+          activities={activities}
           onImport={handleAIImport}
           onClose={() => setShowAIUpload(false)}
         />

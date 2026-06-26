@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { DAYS, ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
+import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, STAFF_PALETTE } from './constants';
 import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter } from './utils';
 
 const HOUR_PX = 60;
@@ -71,7 +71,8 @@ function packLanes(dayEntries) {
   return placements;
 }
 
-export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff }) {
+export default function WeekGrid({ entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff, activityColors: activityColorsProp }) {
+  const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
   const [mobileDay, setMobileDay] = useState(() => {
     const today = todayDayName();
     return DAYS.includes(today) ? today : DAYS[0];

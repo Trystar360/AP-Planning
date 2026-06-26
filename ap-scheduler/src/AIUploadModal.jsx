@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ACTIVITIES, DAYS, TIME_OPTIONS, ACTIVITY_COLORS } from './constants';
+import { ACTIVITIES as DEFAULT_ACTIVITIES, DAYS, TIME_OPTIONS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS } from './constants';
 import { formatTime } from './utils';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -177,7 +177,11 @@ async function analyzeFile(file) {
   });
 }
 
-export default function AIUploadModal({ weekLabel, onImport, onClose }) {
+export default function AIUploadModal({ weekLabel, activities: activitiesProp, onImport, onClose }) {
+  const ACTIVITIES = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
+  const ACTIVITY_COLORS = activitiesProp?.length
+    ? Object.fromEntries(activitiesProp.map((a) => [a.name, { bg: a.bg, border: a.border, text: a.text }]))
+    : DEFAULT_ACTIVITY_COLORS;
   const [step, setStep] = useState('upload');
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
