@@ -86,3 +86,13 @@ export function ordinal(n) {
     default: return `${n}th`;
   }
 }
+
+// Initials for a facilitator avatar badge: first letter of the first word
+// plus first letter of the last word (max 2 chars). "Rodney" → "R",
+// "Mary Jane" → "MJ".
+export function initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
