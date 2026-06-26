@@ -1,4 +1,4 @@
-import { DAYS, ACTIVITY_COLORS } from './constants';
+import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
 import { formatTime, toMinutes, durationLabel, formatWeekLabel } from './utils';
 
 function getFacilitators(e) {
@@ -21,7 +21,10 @@ function formatMins(mins) {
   return h ? `${h}h` : `${m}m`;
 }
 
-export default function PrintView({ entries, weekStart, filterStaff }) {
+export default function PrintView({ entries, weekStart, filterStaff, staff = [], activityColors }) {
+  const ACTIVITY_COLORS = activityColors && Object.keys(activityColors).length ? activityColors : DEFAULT_ACTIVITY_COLORS;
+  const staffColor = (name) => staffColorByIndex(staff.findIndex((s) => s.name === name));
+
   const filtered = filterStaff
     ? entries.filter((e) => getFacilitators(e).includes(filterStaff))
     : entries;
@@ -66,11 +69,26 @@ export default function PrintView({ entries, weekStart, filterStaff }) {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 
+  const facList = (facs) =>
+    facs.length ? (
+      <span className="pv-fac-list">
+        {facs.map((name) => (
+          <span key={name} className="pv-fac">
+            <span className="pv-fac-dot" style={{ background: staffColor(name) }} />
+            {name}
+          </span>
+        ))}
+      </span>
+    ) : '—';
+
   return (
     <div className="print-view">
       <div className="pv-header">
         <div className="pv-header-left">
-          <div className="pv-org">AP Scheduler</div>
+          <div className="pv-brand">
+            <span className="pv-brand-mark">AP</span>
+            <span className="pv-org">AP Scheduler</span>
+          </div>
           <h1 className="pv-title">{title}</h1>
           <div className="pv-week">{formatWeekLabel(weekStart)}</div>
         </div>
@@ -145,19 +163,18 @@ export default function PrintView({ entries, weekStart, filterStaff }) {
                           <span className="pv-time-arrow"> – </span>
                           <span className="pv-time-end">{formatTime(entry.end_time)}</span>
                         </td>
-                        <td
-                          className="pv-act-cell"
-                          style={colors ? {
-                            borderLeft: `4px solid ${colors.border}`,
-                            paddingLeft: '6px',
-                          } : {}}
-                        >
-                          {entry.activity}
+                        <td className="pv-act-cell">
+                          <span
+                            className="pv-act-pill"
+                            style={colors ? { background: colors.bg, borderColor: colors.border, color: colors.text } : {}}
+                          >
+                            {entry.activity}
+                          </span>
                           {cancelled && <span className="pv-cancelled-tag">Cancelled</span>}
                         </td>
                         <td>{entry.group_name || '—'}</td>
                         <td className="pv-dur-cell">{durationLabel(entry.start_time, entry.end_time) || '—'}</td>
-                        <td>{facs.length ? facs.join(', ') : '—'}</td>
+                        <td>{facList(facs)}</td>
                         <td className="pv-notes-cell">{entry.notes || '—'}</td>
                       </tr>
                     );
@@ -186,8 +203,13 @@ export default function PrintView({ entries, weekStart, filterStaff }) {
                       const c = ACTIVITY_COLORS[a.activity];
                       return (
                         <tr key={a.activity}>
-                          <td style={c ? { borderLeft: `3px solid ${c.border}`, paddingLeft: '5px' } : {}}>
-                            {a.activity}
+                          <td>
+                            <span
+                              className="pv-act-pill pv-act-pill-sm"
+                              style={c ? { background: c.bg, borderColor: c.border, color: c.text } : {}}
+                            >
+                              {a.activity}
+                            </span>
                           </td>
                           <td>{a.count}</td>
                           <td>{formatMins(a.mins)}</td>
@@ -208,7 +230,12 @@ export default function PrintView({ entries, weekStart, filterStaff }) {
                   <tbody>
                     {staffSummary.map((s) => (
                       <tr key={s.name}>
-                        <td>{s.name}</td>
+                        <td>
+                          <span className="pv-fac">
+                            <span className="pv-fac-dot" style={{ background: staffColor(s.name) }} />
+                            {s.name}
+                          </span>
+                        </td>
                         <td>{s.count}</td>
                         <td>{formatMins(s.mins)}</td>
                       </tr>
