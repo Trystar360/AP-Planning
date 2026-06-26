@@ -278,7 +278,10 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
         </span>
         {e.group_name && <span className="chip-group">{e.group_name}</span>}
         {timeRange && (
-          <span className="chip-time">{timeRange}{!compact && dur && <span className="chip-duration"> · {dur}</span>}</span>
+          <span className="chip-time-line">
+            <span className="chip-time">{timeRange}</span>
+            {!compact && dur && <span className="chip-duration"> · {dur}</span>}
+          </span>
         )}
         <span className="chip-staff">
           {facilitators.length > 0
