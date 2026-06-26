@@ -1450,6 +1450,7 @@ body {
 @media (max-width: 640px) {
   .app-header { padding: 10px 12px 8px; }
   .header-top h1 { font-size: 1.1rem; }
+  .brand-text { flex-direction: column; align-items: flex-start; gap: 2px; }
 
   /* Collapse action buttons behind hamburger */
   .menu-toggle { display: inline-flex; }
