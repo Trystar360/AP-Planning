@@ -4,7 +4,7 @@ import EntryModal from './EntryModal';
 import StaffPanel from './StaffPanel';
 import CopyModal from './CopyModal';
 import TemplatePanel from './TemplatePanel';
-import ActivitiesPanel from './ActivitiesPanel';
+import ActivitiesPanel, { activityColorForIndex } from './ActivitiesPanel';
 import AIUploadModal from './AIUploadModal';
 import SummaryBar from './SummaryBar';
 import Toast from './Toast';
@@ -156,6 +156,30 @@ export default function App() {
   const handleAIImport = async (importedEntries) => {
     setShowAIUpload(false);
     if (!importedEntries.length) return;
+
+    // Create any activity types the import references that don't exist yet,
+    // each with a distinct colour, so imported entries are colour-coded.
+    let currentActivities = activities;
+    const knownNames = new Set(currentActivities.map((a) => a.name.toLowerCase()));
+    const usedBgs = new Set(currentActivities.map((a) => a.bg));
+    const newNames = [...new Set(importedEntries.map((e) => e.activity).filter(Boolean))]
+      .filter((n) => !knownNames.has(n.toLowerCase()));
+    let createdCount = 0;
+    for (const name of newNames) {
+      let colors;
+      for (let i = currentActivities.length; ; i++) {
+        const c = activityColorForIndex(i);
+        if (!usedBgs.has(c.bg)) { colors = c; break; }
+      }
+      try {
+        const activity = await saveActivity(name, colors);
+        currentActivities = [...currentActivities, activity];
+        usedBgs.add(colors.bg);
+        createdCount++;
+      } catch { /* skip on failure */ }
+    }
+    if (createdCount) setActivities(currentActivities);
+
     let count = 0;
     for (const entry of importedEntries) {
       try {
@@ -164,9 +188,13 @@ export default function App() {
       } catch { /* skip if duplicate */ }
     }
     loadAll();
-    showToast(count
-      ? `Added ${count} ${count === 1 ? 'entry' : 'entries'} from AI import.`
-      : 'No new entries were added (possible duplicates).');
+    if (!count) {
+      showToast('No new entries were added (possible duplicates).');
+      return;
+    }
+    const parts = [`Added ${count} ${count === 1 ? 'entry' : 'entries'}`];
+    if (createdCount) parts.push(`created ${createdCount} new activity ${createdCount === 1 ? 'type' : 'types'}`);
+    showToast(`${parts.join(' and ')} from AI import.`);
   };
 
   const handleAddActivity = async (name, colors) => {

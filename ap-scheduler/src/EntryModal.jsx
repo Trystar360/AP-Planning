@@ -15,7 +15,12 @@ function normFacilitators(entry) {
 }
 
 export default function EntryModal({ mode, entry, staff, activities: activitiesProp, weekStart, onSave, onDuplicate, onDelete, onClose, onOpenFacilitators }) {
-  const activityNames = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
+  const baseActivityNames = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
+  // Keep the entry's current activity selectable even if it's a brand-new type
+  // not yet in the list (e.g. just extracted by AI import).
+  const activityNames = entry?.activity && !baseActivityNames.includes(entry.activity)
+    ? [entry.activity, ...baseActivityNames]
+    : baseActivityNames;
   const defaultStart = entry?.start_time || TIME_OPTIONS[4]; // 9:00 AM
   const [form, setForm] = useState({
     activity: entry?.activity || activityNames[0],

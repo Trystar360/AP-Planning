@@ -5,17 +5,27 @@ import EntryModal from './EntryModal';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
-function normalizeActivity(str, activities) {
+// activityList is an array of { name, aliases? } objects. Returns the canonical
+// activity name, mapping any configured alias (e.g. "MV High Ropes" → "Sky Trail").
+function normalizeActivity(str, activityList) {
   if (!str) return '';
   const s = str.trim();
   if (!s) return '';
   const sl = s.toLowerCase();
-  const exact = activities.find(a => a.toLowerCase() === sl);
-  if (exact) return exact;
-  const partial = activities.find(a => sl.includes(a.toLowerCase()) || a.toLowerCase().includes(sl));
-  if (partial) return partial;
+  const names = activityList.map((a) => a.name);
+  const has = (name) => names.includes(name);
+
+  // Exact match on a name or a configured alias.
+  for (const a of activityList) {
+    if (a.name.toLowerCase() === sl) return a.name;
+    if ((a.aliases || []).some((al) => al && al.toLowerCase() === sl)) return a.name;
+  }
+  // Partial / substring match on names or aliases.
+  for (const a of activityList) {
+    const candidates = [a.name, ...(a.aliases || [])].filter(Boolean);
+    if (candidates.some((c) => sl.includes(c.toLowerCase()) || c.toLowerCase().includes(sl))) return a.name;
+  }
   // Keyword fallbacks — only fire when the named activity exists in the user's list
-  const has = (name) => activities.includes(name);
   if (sl.includes('zip') && (sl.includes('mini') || sl.includes('small')) && has('Mini Zip Line')) return 'Mini Zip Line';
   if (sl.includes('zip') && has('Zip Line')) return 'Zip Line';
   if (sl.includes('climb') && sl.includes('tower') && has('Climbing Tower')) return 'Climbing Tower';
@@ -64,17 +74,23 @@ function fileToBase64(file) {
   });
 }
 
-function buildPrompt(activities) {
-  return `Extract all scheduled events or activity bookings from this image or document. The document can be in any format: screenshot, photo, handwritten note, text message, email, table, calendar, or anything else.
+function buildPrompt(activityList) {
+  const known = activityList.map((a) => {
+    const aliases = (a.aliases || []).filter(Boolean);
+    return aliases.length ? `${a.name} (also known as: ${aliases.join(', ')})` : a.name;
+  }).join('; ');
+  return `Extract all scheduled events or activity bookings from this image or document. The document can be in any format: screenshot, photo, handwritten note, text message, email, calendar, or a printed booking/schedule report with columns and grouped rows.
 
 For each event found, return a JSON object with:
-- activity: name of the activity or event (if it matches one of these, use the exact name: ${activities.join(', ')}; otherwise use whatever name appears; use "" if not mentioned)
-- day: day of week — one of: ${DAYS.join(', ')} (use "" if not found or unclear)
+- activity: the specific activity, ride, or facility being booked. In tabular booking reports this is usually the "Location" or "Function" column (e.g. Zip Line, Wagon Ride, Climbing Tower, MV High Ropes, Sky Trail). Prefer matching one of these known activities if it clearly refers to the same thing — some list alternative names in parentheses, so map those alternatives to the listed activity name: ${known}. Otherwise use the EXACT activity name shown in the document — it is fine to introduce a new activity name that is not in the known list. Use "" only if no activity is mentioned.
+- day: day of the week — one of: ${DAYS.join(', ')}. If the document shows calendar dates instead of weekday names (e.g. a "6/20/2026" date heading, or "Tuesday, June 16, 2026"), work out the day of the week for that date and return the weekday name. A date heading applies to every row beneath it until the next date heading.
 - start_time: start time as "HH:MM" in 24-hour format, between 08:00 and 21:00 (use "" if not found)
 - end_time: end time as "HH:MM" in 24-hour format, after start_time (use "" if not found)
-- group_name: group name, class name, or booking reference (use "" if none)
+- group_name: the booking, group, party, church, family, school, or organisation name. This is often a bold heading above a set of rows (e.g. "Schoonover Family - Family Retreat", "Chodae Community Church NJ - Upper Elementary Retreat") or a "Post As" / "Booking" column value (e.g. "Womens Retreat", "Family Retreat"). Prefer the most descriptive name available. Use "" if none.
 - facilitators: array of staff, instructor, or facilitator name strings (use [] if none mentioned)
-- notes: any other relevant details (use "" if none)
+- notes: any other relevant details such as booking/reference numbers or set-up notes (use "" if none)
+
+Treat each individual time row as its own event, even when several rows share the same group heading or repeat the same activity across consecutive time slots.
 
 Only extract information that is actually present in the document. Do NOT guess or invent values — use "" or [] for fields that are not clearly stated.
 
@@ -153,6 +169,8 @@ async function analyzeFile(file, activities) {
 
 export default function AIUploadModal({ weekLabel, weekStart, activities: activitiesProp, staff = [], onImport, onClose }) {
   const ACTIVITIES = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
+  // Full activity objects (incl. aliases) used for matching during analysis.
+  const activityList = activitiesProp?.length ? activitiesProp : DEFAULT_ACTIVITIES.map((name) => ({ name }));
   const ACTIVITY_COLORS = activitiesProp?.length
     ? Object.fromEntries(activitiesProp.map((a) => [a.name, { bg: a.bg, border: a.border, text: a.text }]))
     : DEFAULT_ACTIVITY_COLORS;
@@ -198,7 +216,7 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
     setStep('analyzing');
     setError('');
     try {
-      const results = await analyzeFile(file, ACTIVITIES);
+      const results = await analyzeFile(file, activityList);
       setEntries(results);
       setSelected(new Set(results.map((_, i) => i)));
       setStep('review');
@@ -223,6 +241,13 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
   const handleImport = () => {
     onImport(entries.filter((_, i) => selected.has(i)));
   };
+
+  // Activity names among the selected entries that aren't set up yet — these
+  // will be created automatically (with a distinct colour) on import.
+  const knownActivities = new Set(ACTIVITIES.map((n) => n.toLowerCase()));
+  const newActivityTypes = [...new Set(
+    entries.filter((_, i) => selected.has(i)).map((e) => e.activity).filter(Boolean),
+  )].filter((n) => !knownActivities.has(n.toLowerCase()));
 
   return (
     <>
@@ -313,6 +338,14 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
                     {weekLabel ? <> for <strong>{weekLabel}</strong></> : null}
                     {' '}— select and edit before adding:
                   </p>
+                  {newActivityTypes.length > 0 && (
+                    <div className="ai-new-activities" role="status">
+                      <span className="ai-new-activities-label">
+                        {newActivityTypes.length} new activity {newActivityTypes.length === 1 ? 'type' : 'types'} will be created:
+                      </span>
+                      <span className="ai-new-activities-names">{newActivityTypes.join(', ')}</span>
+                    </div>
+                  )}
                   <div className="ai-entry-list">
                     {entries.map((entry, i) => {
                       const colors = ACTIVITY_COLORS[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };

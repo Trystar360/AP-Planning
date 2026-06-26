@@ -35,6 +35,23 @@ export default function ActivitiesPanel({ activities, onAdd, onUpdate, onDelete,
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [colorPickerFor, setColorPickerFor] = useState(null);
+  const [aliasDrafts, setAliasDrafts] = useState({});
+
+  const setAliasDraft = (id, v) => setAliasDrafts((d) => ({ ...d, [id]: v }));
+
+  const addAlias = (a) => {
+    const v = (aliasDrafts[a.id] || '').trim();
+    if (!v) return;
+    const current = a.aliases || [];
+    const taken = current.some((x) => x.toLowerCase() === v.toLowerCase())
+      || a.name.toLowerCase() === v.toLowerCase();
+    if (!taken) onUpdate(a.id, { aliases: [...current, v] });
+    setAliasDraft(a.id, '');
+  };
+
+  const removeAlias = (a, name) => {
+    onUpdate(a.id, { aliases: (a.aliases || []).filter((x) => x !== name) });
+  };
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -127,6 +144,31 @@ export default function ActivitiesPanel({ activities, onAdd, onUpdate, onDelete,
                   </span>
                 )}
                 <button className="btn-danger-sm" onClick={() => onDelete(a.id)}>Remove</button>
+              </div>
+              <div className="activity-aliases">
+                <span className="activity-aliases-label">aka</span>
+                {(a.aliases || []).map((al) => (
+                  <span key={al} className="alias-chip">
+                    {al}
+                    <button
+                      type="button"
+                      className="alias-chip-x"
+                      onClick={() => removeAlias(a, al)}
+                      aria-label={`Remove alias ${al}`}
+                    >×</button>
+                  </span>
+                ))}
+                <input
+                  className="alias-input"
+                  value={aliasDrafts[a.id] || ''}
+                  placeholder="add alias…"
+                  autoComplete="off"
+                  onChange={(e) => setAliasDraft(a.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); addAlias(a); }
+                  }}
+                  onBlur={() => addAlias(a)}
+                />
               </div>
               {colorPickerFor === a.id && (
                 <div className="activity-color-picker">
