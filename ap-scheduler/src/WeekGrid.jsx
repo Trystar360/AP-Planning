@@ -212,7 +212,11 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
 
   const yFor = (mins) => ((Math.max(winStart, Math.min(winEnd, mins)) - winStart) / 60) * HOUR_PX;
 
-  const dayEntryCount = (day) => entries.filter((e) => e.day === day && !e.cancelled).length;
+  // When a facilitator filter is active, day counts reflect only that
+  // facilitator's events so each day shows how much they're scheduled.
+  const filtering = filterStaff.length > 0;
+  const matchesFilter = (e) => !filtering || getFacilitators(e).some((f) => filterStaff.includes(f));
+  const dayEntryCount = (day) => entries.filter((e) => e.day === day && !e.cancelled && matchesFilter(e)).length;
 
   // Up to 3 unique activity colours for the week strip dots
   const dayActivityColors = (day) =>
@@ -383,13 +387,13 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
       <div className="week-agenda">
         {dayBlocks.map(({ d, dayEntries }) => {
           const dayDate = weekStart ? getDayDate(weekStart, d) : null;
-          const activeCount = dayEntries.filter((e) => !e.cancelled).length;
+          const activeCount = dayEntries.filter((e) => !e.cancelled && matchesFilter(e)).length;
           return (
             <section key={d} className={`agenda-day${d === todayName ? ' today' : ''}`}>
               <div className={`agenda-day-head${conflictDays.has(d) ? ' conflict' : ''}`}>
                 <span className="agenda-day-name">{d}{dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}</span>
                 {d === todayName && <span className="agenda-today-badge">Today</span>}
-                <span className="agenda-day-count">{activeCount}</span>
+                <span className={`agenda-day-count${filtering ? ' filtered' : ''}`}>{activeCount}</span>
               </div>
               <ul className="agenda-list">
                 {dayEntries.map(renderAgendaRow)}
@@ -447,7 +451,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
               className={`wsd${isActive ? ' active' : ''}${isToday ? ' today' : ''}${hasConflict ? ' conflict-day' : ''}`}
               onClick={() => setMobileDay(d)}
               aria-pressed={isActive}
-              aria-label={`${d}${dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}${count > 0 ? `, ${count} activities` : ', no activities'}${isToday ? ', today' : ''}${hasConflict ? ', has conflicts' : ''}`}
+              aria-label={`${d}${dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}${count > 0 ? `, ${count} ${filtering ? 'matching ' : ''}activities` : filtering ? ', none for this filter' : ', no activities'}${isToday ? ', today' : ''}${hasConflict ? ', has conflicts' : ''}`}
             >
               <span className="wsd-name">{d.slice(0, 3)}</span>
               {dayDate && <span className="wsd-date">{dayDate.getDate()}</span>}
@@ -455,7 +459,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
                 {dots.map((c, i) => <span key={i} className="wsd-dot" style={{ background: c }} />)}
                 {dots.length === 0 && <span className="wsd-dot empty" />}
               </span>
-              {count > 0 && <span className="wsd-count">{count}</span>}
+              {count > 0 && <span className={`wsd-count${filtering ? ' filtered' : ''}`}>{count}</span>}
             </button>
           );
         })}
@@ -476,7 +480,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
             >
               <span className="day-tab-name">{d.slice(0, 3)}</span>
               {dayDate && <span className="day-tab-date">{dayDate.getDate()}</span>}
-              {count > 0 && <span className="day-tab-badge">{count}</span>}
+              {count > 0 && <span className={`day-tab-badge${filtering ? ' filtered' : ''}`}>{count}</span>}
             </button>
           );
         })}
