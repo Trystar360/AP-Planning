@@ -1609,6 +1609,11 @@ body {
 .ai-entry-card {
   display: flex;
   flex-direction: column;
+  /* The list is a scrollable flex column; without this each card would shrink
+     to fit (and overflow:hidden would clip it to a thin line) once the entries
+     exceed the list's max-height. Keep cards at their natural height and let
+     the list scroll instead. */
+  flex-shrink: 0;
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
