@@ -7,11 +7,19 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'a
 
 // activityList is an array of { name, aliases? } objects. Returns the canonical
 // activity name, mapping any configured alias (e.g. "MV High Ropes" → "Sky Trail").
+// Column-header words from booking reports that the model sometimes returns
+// verbatim instead of the cell value — never treat these as an activity.
+const COLUMN_HEADERS = new Set([
+  'location', 'function', 'booking', 'post as', 'set up', 'set up text',
+  'start time', 'end time', 'gtd #', 'gtd', 'gtd#',
+]);
+
 function normalizeActivity(str, activityList) {
   if (!str) return '';
   const s = str.trim();
   if (!s) return '';
   const sl = s.toLowerCase();
+  if (COLUMN_HEADERS.has(sl)) return '';
   const names = activityList.map((a) => a.name);
   const has = (name) => names.includes(name);
 
@@ -109,7 +117,7 @@ function buildPrompt(activityList) {
   return `Extract all scheduled events or activity bookings from this image or document. The document can be in any format: screenshot, photo, handwritten note, text message, email, calendar, or a printed booking/schedule report with columns and grouped rows.
 
 For each event found, return a JSON object with:
-- activity: the specific activity, ride, or facility being booked. In tabular booking reports this is usually the "Location" or "Function" column (e.g. Zip Line, Wagon Ride, Climbing Tower, MV High Ropes, Sky Trail). Prefer matching one of these known activities if it clearly refers to the same thing — some list alternative names in parentheses, so map those alternatives to the listed activity name: ${known}. Otherwise use the EXACT activity name shown in the document — it is fine to introduce a new activity name that is not in the known list. Use "" only if no activity is mentioned.
+- activity: the specific activity, ride, or facility being booked — the VALUE in the row, e.g. "Zip Line", "Wagon Ride", "Climbing Tower", "MV High Ropes", "Sky Trail". In a tabular booking report this value sits in the column headed "Location" (sometimes "Function"). Read the cell value for each row — NEVER return a column-header word itself such as "Location", "Function", "Booking", "Post As", "Set Up", "Set Up Text", "Start time", "End time" or "Gtd #". Prefer matching one of these known activities if it clearly refers to the same thing — some list alternative names in parentheses, so map those alternatives to the listed activity name: ${known}. Otherwise use the EXACT activity name shown in the document — it is fine to introduce a new activity name that is not in the known list. Use "" only if no activity is mentioned.
 - date: the calendar date shown as a heading above this listing, copied EXACTLY as printed (e.g. "6/20/2026" or "June 20, 2026"). In a booking/schedule report this date is a bold or underlined heading that applies to every row beneath it until the next date heading — carry the same date down onto every row under it. Use "" only if there is genuinely no date heading anywhere above the row.
 - day: the weekday name — one of: ${DAYS.join(', ')} — but ONLY if the document literally prints a weekday word (e.g. "Tuesday"). Do NOT calculate or guess the weekday from a calendar date — the app computes that from the date field. Leave day as "" whenever only a numeric or written-out date is shown, and "" if neither a weekday word nor a date is present.
 - start_time: start time as "HH:MM" in 24-hour format, between 08:00 and 21:00 (use "" if not found)
