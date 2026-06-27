@@ -149,6 +149,18 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
     setMobileDayRaw(day);
     try { localStorage.setItem('ap:last-day', day); } catch {}
   };
+  // Mobile layout: 'day' = single-day timeline, 'week' = condensed agenda of the whole week
+  const [mobileView, setMobileViewRaw] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ap:mobile-view');
+      if (saved === 'day' || saved === 'week') return saved;
+    } catch {}
+    return 'day';
+  });
+  const setMobileView = (v) => {
+    setMobileViewRaw(v);
+    try { localStorage.setItem('ap:mobile-view', v); } catch {}
+  };
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
   );
@@ -180,6 +192,8 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
   const conflictDays = new Set(entries.filter((e) => conflicts.has(e.id)).map((e) => e.day));
   const todayName = isCurrentWeek ? todayDayName() : null;
   const visibleDays = isMobile ? [mobileDay] : DAYS;
+  // Condensed whole-week agenda — mobile only, when the user opts into "Week".
+  const weekMode = isMobile && mobileView === 'week';
 
   let winStart = DAY_MIN, winEnd = DAY_MAX;
   if (!entries.length) {
@@ -300,6 +314,93 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
     );
   };
 
+  const renderAgendaRow = (e) => {
+    const colors = ACTIVITY_COLORS[e.activity] || {};
+    const facilitators = getFacilitators(e);
+    const isConflict = conflicts.has(e.id);
+    const isDimmed = filterStaff.length > 0 && !facilitators.some((f) => filterStaff.includes(f));
+    const start = e.start_time ? formatTime(e.start_time) : e.time_slot ? formatTime(e.time_slot) : '';
+    const end = e.end_time ? formatTime(e.end_time) : '';
+    const dur = durationLabel(e.start_time, e.end_time);
+    const timeRange = end ? `${start} – ${end}` : start;
+    const tooltip = [e.activity, e.group_name, timeRange, facilitators.join(', '), e.notes, e.cancelled ? 'Cancelled' : ''].filter(Boolean).join(' · ');
+    return (
+      <li key={e.id}>
+        <div
+          className={`agenda-item${isConflict ? ' conflict' : ''}${isDimmed ? ' dimmed' : ''}${e.cancelled ? ' cancelled' : ''}`}
+          style={{ borderLeftColor: colors.border || 'var(--border-strong)' }}
+          role="button"
+          tabIndex={0}
+          title={tooltip}
+          aria-label={`View ${e.activity}${e.group_name ? `, ${e.group_name}` : ''}, ${timeRange}, ${facilitators.join(', ') || 'Unassigned'}${e.cancelled ? ', cancelled' : ''}`}
+          onClick={() => setViewEntry(e)}
+          onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setViewEntry(e); } }}
+        >
+          <div className="agenda-time">
+            <span className="agenda-time-start">{start || '—'}</span>
+            {end && <span className="agenda-time-end">{end}</span>}
+          </div>
+          <div className="agenda-main">
+            <div className="agenda-activity">
+              {isConflict && <span className="chip-warning" title="A facilitator is double-booked at this time">⚠</span>}
+              <span className="agenda-dot" style={{ background: colors.border || 'var(--text-faint)' }} />
+              <span className="agenda-activity-name">{e.activity}</span>
+              {dur && <span className="agenda-dur">{dur}</span>}
+              {e.cancelled && <span className="chip-cancelled-tag">cancelled</span>}
+            </div>
+            {e.group_name && <div className="agenda-group">{e.group_name}</div>}
+            <div className="agenda-staff">
+              {facilitators.length > 0
+                ? facilitators.map((name) => (
+                    <span key={name} className="chip-facilitator" title={name}>
+                      <span className="chip-avatar" style={{ background: staffColor(name, staff) }}>{initials(name)}</span>
+                      <span className="chip-facilitator-name">{name}</span>
+                    </span>
+                  ))
+                : <em className="chip-unassigned">Unassigned</em>}
+            </div>
+            {e.notes && <div className="agenda-notes">{e.notes}</div>}
+          </div>
+          <span className="agenda-go" aria-hidden="true">↗</span>
+        </div>
+      </li>
+    );
+  };
+
+  const renderAgenda = () => {
+    const dayBlocks = DAYS
+      .map((d) => ({
+        d,
+        dayEntries: entries
+          .filter((e) => e.day === d)
+          .sort((a, b) => entryStart(a) - entryStart(b) || entryEnd(a) - entryEnd(b)),
+      }))
+      .filter(({ dayEntries }) => dayEntries.length > 0);
+
+    if (dayBlocks.length === 0) return null;
+
+    return (
+      <div className="week-agenda">
+        {dayBlocks.map(({ d, dayEntries }) => {
+          const dayDate = weekStart ? getDayDate(weekStart, d) : null;
+          const activeCount = dayEntries.filter((e) => !e.cancelled).length;
+          return (
+            <section key={d} className={`agenda-day${d === todayName ? ' today' : ''}`}>
+              <div className={`agenda-day-head${conflictDays.has(d) ? ' conflict' : ''}`}>
+                <span className="agenda-day-name">{d}{dayDate ? ` ${ordinal(dayDate.getDate())}` : ''}</span>
+                {d === todayName && <span className="agenda-today-badge">Today</span>}
+                <span className="agenda-day-count">{activeCount}</span>
+              </div>
+              <ul className="agenda-list">
+                {dayEntries.map(renderAgendaRow)}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="week-grid-outer">
       {conflicts.size > 0 && (
@@ -308,7 +409,30 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
         </div>
       )}
 
+      {/* Mobile layout switch — single day timeline vs. condensed week agenda */}
+      <div className="mobile-view-toggle" role="tablist" aria-label="Mobile layout">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileView === 'day'}
+          className={mobileView === 'day' ? 'active' : ''}
+          onClick={() => setMobileView('day')}
+        >
+          Day
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileView === 'week'}
+          className={mobileView === 'week' ? 'active' : ''}
+          onClick={() => setMobileView('week')}
+        >
+          Week
+        </button>
+      </div>
+
       {/* Mobile week overview strip — shows all 7 days with activity colour dots */}
+      {!weekMode && (
       <div className="week-strip">
         {DAYS.map((d) => {
           const dots = dayActivityColors(d);
@@ -336,6 +460,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
           );
         })}
       </div>
+      )}
 
       {/* Day tabs — desktop only (week strip handles mobile) */}
       <div className="day-tabs">
@@ -357,13 +482,14 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
         })}
       </div>
 
-      {showSwipeHint && (
+      {showSwipeHint && !weekMode && (
         <div className="swipe-hint" role="status" onClick={dismissSwipeHint}>
           ← Swipe to change day →
           <button className="swipe-hint-dismiss" aria-label="Dismiss hint">×</button>
         </div>
       )}
 
+      {weekMode ? renderAgenda() : (
       <div
         className="timeline"
         style={{ gridTemplateColumns: `52px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
@@ -417,6 +543,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
           );
         })}
       </div>
+      )}
 
       {entries.length === 0 && (
         <div className="empty-week">
