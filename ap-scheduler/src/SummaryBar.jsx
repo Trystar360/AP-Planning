@@ -1,5 +1,5 @@
 import { ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
-import { toMinutes, formatMinutes } from './utils';
+import { toMinutes, formatMinutes, doubleBookedFacilitators } from './utils';
 
 function getFacilitators(e) {
   if (Array.isArray(e.facilitators)) return e.facilitators;
@@ -7,7 +7,7 @@ function getFacilitators(e) {
   return [];
 }
 
-export default function SummaryBar({ entries: allEntries, staff, activityColors: activityColorsProp }) {
+export default function SummaryBar({ entries: allEntries, staff, activityColors: activityColorsProp, filterStaff = [], onToggleFacilitator }) {
   const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
   const entries = allEntries.filter((e) => !e.cancelled);
   if (entries.length === 0) return null;
@@ -30,6 +30,7 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
   });
 
   const staffColor = (name) => staffColorByIndex(staff.findIndex((s) => s.name === name));
+  const doubleBooked = doubleBookedFacilitators(allEntries);
 
   const activities = Object.entries(byActivity).sort((a, b) => b[1] - a[1]);
   const people = Object.entries(byFacilitator).sort((a, b) => b[1].mins - a[1].mins);
@@ -53,14 +54,29 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
         </div>
       </div>
       <div className="summary-group">
-        <span className="summary-label">By facilitator</span>
+        <span className="summary-label">By facilitator{onToggleFacilitator ? ' · tap to filter' : ''}</span>
         <div className="summary-pills">
-          {people.map(([name, v]) => (
-            <span key={name} className="summary-pill summary-staff">
-              <span className="staff-dot" style={{ background: staffColor(name) }} />
-              {name} <b>{v.count}</b> · {formatMinutes(v.mins)}
-            </span>
-          ))}
+          {people.map(([name, v]) => {
+            const active = filterStaff.includes(name);
+            const conflict = doubleBooked.has(name);
+            const title = conflict
+              ? `${name} is double-booked${onToggleFacilitator ? ' — tap to filter' : ''}`
+              : onToggleFacilitator ? `Tap to filter to ${name}` : undefined;
+            return (
+              <button
+                key={name}
+                type="button"
+                className={`summary-pill summary-staff${active ? ' active' : ''}${conflict ? ' double-booked' : ''}`}
+                onClick={() => onToggleFacilitator?.(name)}
+                aria-pressed={active}
+                title={title}
+              >
+                <span className="staff-dot" style={{ background: staffColor(name) }} />
+                {name} <b>{v.count}</b> · {formatMinutes(v.mins)}
+                {conflict && <span className="summary-warning" aria-hidden="true">⚠</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

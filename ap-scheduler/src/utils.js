@@ -87,6 +87,42 @@ export function ordinal(n) {
   }
 }
 
+// Names of facilitators who are double-booked somewhere this week — i.e. they
+// have two or more overlapping, non-cancelled activities on the same day.
+// Mirrors the per-entry conflict logic in WeekGrid, but keyed by name so the
+// totals cards can flag the people involved.
+export function doubleBookedFacilitators(entries) {
+  const getFacs = (e) =>
+    Array.isArray(e.facilitators) ? e.facilitators : e.staff ? [e.staff] : [];
+  const start = (e) => toMinutes(e.start_time || e.time_slot || '00:00');
+  const end = (e) => {
+    const v = toMinutes(e.end_time || '');
+    return v > start(e) ? v : start(e) + 30;
+  };
+  // name -> day -> list of that person's activities on that day
+  const byPersonDay = new Map();
+  entries.filter((e) => !e.cancelled).forEach((e) => {
+    getFacs(e).forEach((name) => {
+      if (!byPersonDay.has(name)) byPersonDay.set(name, {});
+      const days = byPersonDay.get(name);
+      (days[e.day] = days[e.day] || []).push(e);
+    });
+  });
+  const booked = new Set();
+  byPersonDay.forEach((days, name) => {
+    Object.values(days).forEach((list) => {
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          if (start(list[i]) < end(list[j]) && start(list[j]) < end(list[i])) {
+            booked.add(name);
+          }
+        }
+      }
+    });
+  });
+  return booked;
+}
+
 // Initials for a facilitator avatar badge: first letter of the first word
 // plus first letter of the last word (max 2 chars). "Rodney" → "R",
 // "Mary Jane" → "MJ".
