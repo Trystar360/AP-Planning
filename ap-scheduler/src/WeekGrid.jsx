@@ -133,7 +133,7 @@ function packLanes(dayEntries) {
   return placements;
 }
 
-export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff, activityColors: activityColorsProp }) {
+export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onDelete, isCurrentWeek, fullDay, filterStaff = [], activityColors: activityColorsProp }) {
   const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
   const [viewEntry, setViewEntry] = useState(null);
   const [mobileDay, setMobileDayRaw] = useState(() => {
@@ -246,7 +246,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
       : e.time_slot ? formatTime(e.time_slot) : '';
     const dur = durationLabel(e.start_time, e.end_time);
     const isConflict = conflicts.has(e.id);
-    const isDimmed = filterStaff && !facilitators.includes(filterStaff);
+    const isDimmed = filterStaff.length > 0 && !facilitators.some((f) => filterStaff.includes(f));
     const compact = height < 44;
     const tooltip = [
       e.activity,

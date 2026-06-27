@@ -336,27 +336,6 @@ body {
 }
 .toggle-label input { cursor: pointer; accent-color: var(--primary); }
 
-.staff-filter {
-  padding: 7px 30px 7px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-sans);
-  font-size: 0.84rem;
-  font-weight: 600;
-  background: var(--surface);
-  color: var(--text);
-  min-height: 36px;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236a6253' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: border-color var(--dur);
-}
-.staff-filter:hover { border-color: var(--text-faint); }
-.staff-filter:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
-
 .btn-copy { white-space: nowrap; }
 
 /* ── Filter active bar ── */
@@ -485,6 +464,27 @@ body {
 }
 .summary-pill b { font-family: var(--font-mono); font-weight: 700; }
 .staff-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* Facilitator totals double as filter toggles */
+button.summary-staff {
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: border-color var(--dur), background var(--dur), box-shadow var(--dur), color var(--dur);
+}
+button.summary-staff:hover { border-color: var(--text-faint); background: var(--surface); }
+button.summary-staff:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.summary-staff.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+/* A double-booked facilitator's card gets a red outline regardless of state */
+.summary-staff.double-booked {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.summary-staff.double-booked.active { background: var(--danger-soft); color: var(--danger-text); }
+.summary-warning { color: var(--danger); font-weight: 700; line-height: 1; margin-left: 2px; }
 
 /* ═══════════════════════════════════════════════════════════
    DAY TABS (desktop only)
@@ -1822,7 +1822,6 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .staff-filter { grid-column: 1 / -1; width: 100%; }
   .toolbar .toggle-label,
   .toolbar .btn-secondary { width: 100%; justify-content: center; }
 

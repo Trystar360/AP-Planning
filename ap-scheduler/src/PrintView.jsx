@@ -25,8 +25,11 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
   const ACTIVITY_COLORS = activityColors && Object.keys(activityColors).length ? activityColors : DEFAULT_ACTIVITY_COLORS;
   const staffColor = (name) => staffColorByIndex(staff.findIndex((s) => s.name === name));
 
-  const filtered = filterStaff
-    ? entries.filter((e) => getFacilitators(e).includes(filterStaff))
+  const filterNames = Array.isArray(filterStaff) ? filterStaff : filterStaff ? [filterStaff] : [];
+  const isFiltered = filterNames.length > 0;
+
+  const filtered = isFiltered
+    ? entries.filter((e) => getFacilitators(e).some((f) => filterNames.includes(f)))
     : entries;
 
   const byDay = DAYS.map((day, i) => {
@@ -52,8 +55,8 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
     })
     .sort((a, b) => b.count - a.count);
 
-  const allFacNames = filterStaff
-    ? [filterStaff]
+  const allFacNames = isFiltered
+    ? filterNames
     : [...new Set(active.flatMap(getFacilitators))].sort();
 
   const staffSummary = allFacNames
@@ -64,7 +67,11 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
     })
     .filter((s) => s.count > 0);
 
-  const title = filterStaff ? `${filterStaff}'s Schedule` : 'Weekly Activity Schedule';
+  const title = !isFiltered
+    ? 'Weekly Activity Schedule'
+    : filterNames.length === 1
+      ? `${filterNames[0]}'s Schedule`
+      : "Selected Facilitators' Schedule";
   const printDate = new Date().toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -251,7 +258,7 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
       )}
 
       <div className="pv-footer">
-        <span>AP Scheduler — {filterStaff ? `${filterStaff}'s rota` : 'Full schedule'}</span>
+        <span>AP Scheduler — {isFiltered ? (filterNames.length === 1 ? `${filterNames[0]}'s rota` : `${filterNames.length} facilitators' rota`) : 'Full schedule'}</span>
         <span>{formatWeekLabel(weekStart)}</span>
         <span>Printed {printDate}</span>
       </div>

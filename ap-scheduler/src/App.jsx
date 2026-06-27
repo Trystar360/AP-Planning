@@ -32,7 +32,7 @@ export default function App() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
-  const [filterStaff, setFilterStaff] = useState('');
+  const [filterStaff, setFilterStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fullDay, setFullDay] = useState(false);
@@ -115,6 +115,9 @@ export default function App() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [loadAll]);
+
+  const toggleFilterStaff = (name) =>
+    setFilterStaff((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
 
   const handleAdd = (day, start_time) => setModal({ mode: 'add', day, start_time });
   const handleEdit = (entry) => setModal({ mode: 'edit', entry });
@@ -241,7 +244,7 @@ export default function App() {
   const handleDeleteStaff = async (id) => {
     const member = staff.find((s) => s.id === id);
     setStaff((prev) => prev.filter((s) => s.id !== id));
-    if (filterStaff && member && member.name === filterStaff) setFilterStaff('');
+    if (member) setFilterStaff((prev) => prev.filter((n) => n !== member.name));
     await deleteStaff(id);
     if (!member) return;
     showToast(`Removed facilitator ${member.name}`, {
@@ -299,7 +302,11 @@ export default function App() {
   const goToday = () => setWeekStart(currentWeek);
 
   const isCurrentWeek = weekStart === currentWeek;
-  const printTitle = filterStaff ? `Print ${filterStaff}'s rota` : 'Print schedule';
+  const printTitle = filterStaff.length === 1
+    ? `Print ${filterStaff[0]}'s rota`
+    : filterStaff.length > 1
+      ? `Print ${filterStaff.length} facilitators' rota`
+      : 'Print schedule';
   const activityColors = Object.fromEntries(
     activities.map((a) => [a.name, { bg: a.bg, border: a.border, text: a.text }])
   );
@@ -380,15 +387,6 @@ export default function App() {
           {!isCurrentWeek && <button className="btn-today" onClick={goToday}>Today</button>}
 
           <div className="toolbar">
-            <select
-              className="staff-filter"
-              value={filterStaff}
-              onChange={(e) => setFilterStaff(e.target.value)}
-              title="Show only one facilitator's shifts"
-            >
-              <option value="">All facilitators</option>
-              {staff.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
             <label className="toggle-label" title="Show the full 8am–9pm day instead of just busy hours">
               <input
                 type="checkbox"
@@ -403,10 +401,14 @@ export default function App() {
           </div>
         </div>
 
-        {filterStaff && (
+        {filterStaff.length > 0 && (
           <div className="filter-active-bar">
-            <span>Showing <strong>{filterStaff}</strong>'s shifts only</span>
-            <button className="btn-ghost filter-clear" onClick={() => setFilterStaff('')}>✕ Clear</button>
+            <span>
+              {filterStaff.length === 1
+                ? <>Showing <strong>{filterStaff[0]}</strong>'s shifts only</>
+                : <>Showing shifts for <strong>{filterStaff.join(', ')}</strong></>}
+            </span>
+            <button className="btn-ghost filter-clear" onClick={() => setFilterStaff([])}>✕ Clear</button>
           </div>
         )}
       </header>
@@ -417,7 +419,15 @@ export default function App() {
           <div className="loading">Loading…</div>
         ) : (
           <>
-            {showSummary && <SummaryBar entries={entries} staff={staff} activityColors={activityColors} />}
+            {showSummary && (
+              <SummaryBar
+                entries={entries}
+                staff={staff}
+                activityColors={activityColors}
+                filterStaff={filterStaff}
+                onToggleFacilitator={toggleFilterStaff}
+              />
+            )}
             <WeekGrid
               weekStart={weekStart}
               entries={entries}
