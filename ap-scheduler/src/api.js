@@ -2,6 +2,17 @@
 // otherwise falls back to localStorage so local dev works without credentials.
 
 import { ACTIVITIES, ACTIVITY_COLORS } from './constants';
+import { canonicalWeekStart, formatWeekStart } from './utils';
+
+// The Friday before a Saturday week-start — where the old UTC-based key format
+// stored weeks in positive-offset timezones. Fetched alongside the canonical
+// key so legacy entries still appear, without rewriting any stored data.
+function legacyWeekKey(weekStart) {
+  const d = new Date(weekStart + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() - 1);
+  return formatWeekStart(d);
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
@@ -59,8 +70,13 @@ async function sbDelete(path) {
 // ─── Supabase API ─────────────────────────────────────────────────────────────
 
 const sb = {
-  fetchSchedule: (weekStart) =>
-    sbGet(`schedule_entries?week_start=eq.${weekStart}&order=day,start_time`),
+  fetchSchedule: (weekStart) => {
+    const legacy = legacyWeekKey(weekStart);
+    const filter = legacy
+      ? `or=(week_start.eq.${weekStart},week_start.eq.${legacy})`
+      : `week_start=eq.${weekStart}`;
+    return sbGet(`schedule_entries?${filter}&order=day,start_time`);
+  },
 
   addEntry: (entry) => sbPost('schedule_entries', entry),
 
@@ -158,7 +174,7 @@ function getTemplateStore() { return lsRead(TEMPLATE_KEY, []); }
 const resolve = (v) => Promise.resolve(v);
 
 const ls = {
-  fetchSchedule: (w) => resolve(getEntryStore().filter((e) => e.week_start === w)),
+  fetchSchedule: (w) => resolve(getEntryStore().filter((e) => canonicalWeekStart(e.week_start) === w)),
 
   addEntry(entry) {
     const entries = getEntryStore();

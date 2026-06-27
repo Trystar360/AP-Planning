@@ -8,8 +8,33 @@ export function getWeekStart(date) {
   return d;
 }
 
+// Serialise a week-start Date to a YYYY-MM-DD key using its LOCAL calendar
+// components. Using toISOString() here was a bug: it converts to UTC first, so
+// in positive-offset timezones (e.g. UK in summer) local midnight Saturday
+// becomes the previous day in UTC and the key — and every date derived from it
+// — shifted back a day. getWeekStart/getDayDate/addWeeks all work in local
+// time, so the key must too.
 export function formatWeekStart(date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// Legacy week-start keys written by the old UTC-based formatWeekStart land on
+// the Friday before the intended Saturday (only ever in positive-offset zones).
+// This maps such a key forward to its canonical Saturday so existing entries
+// still resolve to the right week. Saturdays (and anything else) pass through,
+// so it's a no-op for data written in UTC or the Americas, and idempotent.
+export function canonicalWeekStart(key) {
+  if (!key) return key;
+  const d = new Date(key + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return key;
+  if (d.getDay() === 5) { // Friday — legacy off-by-one
+    d.setDate(d.getDate() + 1);
+    return formatWeekStart(d);
+  }
+  return key;
 }
 
 export function formatWeekLabel(weekStart) {

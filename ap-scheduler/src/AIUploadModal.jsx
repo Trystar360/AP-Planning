@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ACTIVITIES as DEFAULT_ACTIVITIES, DAYS, TIME_OPTIONS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS } from './constants';
-import { formatTime } from './utils';
+import { formatTime, getWeekStart, formatWeekStart, getDayDate } from './utils';
 import EntryModal from './EntryModal';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -52,27 +52,30 @@ function normalizeDay(str) {
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-// Compute the weekday name for a calendar date the model copied verbatim from a
-// date heading. Doing this in code — rather than asking the model to work out
-// the weekday — is deterministic and always correct (LLMs are unreliable at
-// calendar math). Handles "M/D/YYYY" (the common report format) explicitly and
-// falls back to native Date parsing for written-out dates like "June 20, 2026".
-function dateToWeekday(str) {
-  if (!str) return '';
+// Parse a date heading the model copied verbatim into a local Date (or null).
+// Handles "M/D/YYYY" (the common report format) explicitly — constructed in
+// local time so the weekday/week aren't shifted by a UTC offset — and falls
+// back to native parsing for written-out dates like "June 20, 2026".
+function parseDate(str) {
+  if (!str) return null;
   const s = str.trim();
-  if (!s) return '';
-  let dt;
+  if (!s) return null;
   const md = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (md) {
-    let [, mm, dd, yy] = md;
+    const [, mm, dd, yy] = md;
     const year = yy.length === 2 ? 2000 + Number(yy) : Number(yy);
-    // Construct in local time so getDay() isn't shifted by a UTC offset.
-    dt = new Date(year, Number(mm) - 1, Number(dd));
-  } else {
-    const parsed = new Date(s);
-    if (!Number.isNaN(parsed.getTime())) dt = parsed;
+    const dt = new Date(year, Number(mm) - 1, Number(dd));
+    return Number.isNaN(dt.getTime()) ? null : dt;
   }
-  if (!dt || Number.isNaN(dt.getTime())) return '';
+  const parsed = new Date(s);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+// Weekday name for a calendar date. Doing this in code — rather than asking the
+// model to work out the weekday — is deterministic and always correct (LLMs are
+// unreliable at calendar math).
+function dateToWeekday(dt) {
+  if (!dt) return '';
   const name = WEEKDAY_NAMES[dt.getDay()];
   return DAYS.includes(name) ? name : '';
 }
@@ -286,13 +289,18 @@ async function analyzeFile(file, activities) {
     if (TIME_OPTIONS.indexOf(end) - startIdx < MIN_SLOTS) {
       end = TIME_OPTIONS[Math.min(startIdx + MIN_SLOTS, TIME_OPTIONS.length - 1)];
     }
-    // The date heading is authoritative — compute the weekday from it. Only
-    // fall back to a literal weekday word when no date was found. Leave blank
-    // (so the row is flagged for input) when neither is present.
-    const day = dateToWeekday(e.date) || normalizeDay(e.day);
+    // The date heading is authoritative — compute the weekday AND the week it
+    // belongs to from it, so each entry lands in its real week rather than
+    // whatever week happens to be open. Only fall back to a literal weekday
+    // word when no date was found; leave both blank (so the row is flagged for
+    // input) when neither is present.
+    const dt = parseDate(e.date);
+    const day = dateToWeekday(dt) || normalizeDay(e.day);
+    const week_start = dt ? formatWeekStart(getWeekStart(dt)) : '';
     return {
       activity: normalizeActivity(e.activity, activities),
       day,
+      week_start,
       start_time: start,
       end_time: end,
       group_name: e.group_name || '',
@@ -302,10 +310,12 @@ async function analyzeFile(file, activities) {
   });
 
   // Drop exact-duplicate rows — guards against the model repeating entries.
+  // The week is part of the key so the same activity on different weeks (e.g. a
+  // recurring booking) isn't collapsed into one.
   const seen = new Set();
   return mapped.filter((e) => {
     const key = [
-      e.activity, e.day, e.start_time, e.end_time,
+      e.activity, e.week_start, e.day, e.start_time, e.end_time,
       e.group_name, e.facilitators.join(','), e.notes,
     ].join('|').toLowerCase();
     if (seen.has(key)) return false;
@@ -314,7 +324,7 @@ async function analyzeFile(file, activities) {
   });
 }
 
-export default function AIUploadModal({ weekLabel, weekStart, activities: activitiesProp, staff = [], onImport, onClose }) {
+export default function AIUploadModal({ weekStart, activities: activitiesProp, staff = [], onImport, onClose }) {
   const ACTIVITIES = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
   // Full activity objects (incl. aliases) used for matching during analysis.
   const activityList = activitiesProp?.length ? activitiesProp : DEFAULT_ACTIVITIES.map((name) => ({ name }));
@@ -489,8 +499,7 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
                 <>
                   <p className="ai-review-count">
                     Found <strong>{entries.length}</strong> {entries.length === 1 ? 'entry' : 'entries'}
-                    {weekLabel ? <> for <strong>{weekLabel}</strong></> : null}
-                    {' '}— select and edit before adding:
+                    {' '}— each is placed in the week of its date. Select and edit before adding:
                   </p>
                   {newActivityTypes.length > 0 && (
                     <div className="ai-new-activities" role="status">
@@ -531,7 +540,9 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
                               </span>
                               <span className="ai-entry-time">
                                 {entry.day ? (
-                                  entry.day
+                                  entry.week_start
+                                    ? (getDayDate(entry.week_start, entry.day)?.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) || entry.day)
+                                    : entry.day
                                 ) : (
                                   <select
                                     className="ai-entry-day-select"

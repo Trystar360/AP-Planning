@@ -184,20 +184,37 @@ export default function App() {
     if (createdCount) setActivities(currentActivities);
 
     let count = 0;
+    const importedWeeks = new Set();
     for (const entry of importedEntries) {
+      // Each entry carries the week of its own date; only fall back to the
+      // open week when the document had no date for that row.
+      const week = entry.week_start || weekStart;
       try {
-        await addEntry({ ...entry, week_start: weekStart });
+        await addEntry({ ...entry, week_start: week });
+        importedWeeks.add(week);
         count++;
       } catch { /* skip if duplicate */ }
     }
-    loadAll();
     if (!count) {
       showToast('No new entries were added (possible duplicates).');
       return;
     }
+    // Jump to where the entries actually landed so the import is visible —
+    // stay put if any landed on the open week, else go to the earliest.
+    const targetWeek = importedWeeks.has(weekStart)
+      ? weekStart
+      : [...importedWeeks].sort()[0];
+    if (targetWeek && targetWeek !== weekStart) setWeekStart(targetWeek);
+    else loadAll();
     const parts = [`Added ${count} ${count === 1 ? 'entry' : 'entries'}`];
     if (createdCount) parts.push(`created ${createdCount} new activity ${createdCount === 1 ? 'type' : 'types'}`);
-    showToast(`${parts.join(' and ')} from AI import.`);
+    const spansOtherWeeks = importedWeeks.size > 1 || (targetWeek && targetWeek !== weekStart);
+    const suffix = spansOtherWeeks
+      ? importedWeeks.size > 1
+        ? ' across multiple weeks'
+        : ` in the week of ${formatWeekLabel(targetWeek)}`
+      : '';
+    showToast(`${parts.join(' and ')} from AI import${suffix}.`);
   };
 
   const handleAddActivity = async (name, colors) => {
