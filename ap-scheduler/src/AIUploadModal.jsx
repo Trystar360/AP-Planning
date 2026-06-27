@@ -42,6 +42,33 @@ function normalizeDay(str) {
   return DAYS.find(d => d.toLowerCase().startsWith(s.slice(0, 3))) || '';
 }
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// Compute the weekday name for a calendar date the model copied verbatim from a
+// date heading. Doing this in code — rather than asking the model to work out
+// the weekday — is deterministic and always correct (LLMs are unreliable at
+// calendar math). Handles "M/D/YYYY" (the common report format) explicitly and
+// falls back to native Date parsing for written-out dates like "June 20, 2026".
+function dateToWeekday(str) {
+  if (!str) return '';
+  const s = str.trim();
+  if (!s) return '';
+  let dt;
+  const md = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (md) {
+    let [, mm, dd, yy] = md;
+    const year = yy.length === 2 ? 2000 + Number(yy) : Number(yy);
+    // Construct in local time so getDay() isn't shifted by a UTC offset.
+    dt = new Date(year, Number(mm) - 1, Number(dd));
+  } else {
+    const parsed = new Date(s);
+    if (!Number.isNaN(parsed.getTime())) dt = parsed;
+  }
+  if (!dt || Number.isNaN(dt.getTime())) return '';
+  const name = WEEKDAY_NAMES[dt.getDay()];
+  return DAYS.includes(name) ? name : '';
+}
+
 function normalizeTime(str) {
   if (!str) return '';
   const s = str.trim().toLowerCase();
@@ -83,7 +110,8 @@ function buildPrompt(activityList) {
 
 For each event found, return a JSON object with:
 - activity: the specific activity, ride, or facility being booked. In tabular booking reports this is usually the "Location" or "Function" column (e.g. Zip Line, Wagon Ride, Climbing Tower, MV High Ropes, Sky Trail). Prefer matching one of these known activities if it clearly refers to the same thing — some list alternative names in parentheses, so map those alternatives to the listed activity name: ${known}. Otherwise use the EXACT activity name shown in the document — it is fine to introduce a new activity name that is not in the known list. Use "" only if no activity is mentioned.
-- day: day of the week — one of: ${DAYS.join(', ')}. If the document shows calendar dates instead of weekday names (e.g. a "6/20/2026" date heading, or "Tuesday, June 16, 2026"), work out the day of the week for that date and return the weekday name. A date heading applies to every row beneath it until the next date heading.
+- date: the calendar date shown as a heading above this listing, copied EXACTLY as printed (e.g. "6/20/2026" or "June 20, 2026"). In a booking/schedule report this date is a bold or underlined heading that applies to every row beneath it until the next date heading — carry the same date down onto every row under it. Use "" only if there is genuinely no date heading anywhere above the row.
+- day: the weekday name — one of: ${DAYS.join(', ')} — but ONLY if the document literally prints a weekday word (e.g. "Tuesday"). Do NOT calculate or guess the weekday from a calendar date — the app computes that from the date field. Leave day as "" whenever only a numeric or written-out date is shown, and "" if neither a weekday word nor a date is present.
 - start_time: start time as "HH:MM" in 24-hour format, between 08:00 and 21:00 (use "" if not found)
 - end_time: end time as "HH:MM" in 24-hour format, after start_time (use "" if not found)
 - group_name: the booking, group, party, church, family, school, or organisation name. This is often a bold heading above a set of rows (e.g. "Schoonover Family - Family Retreat", "Chodae Community Church NJ - Upper Elementary Retreat") or a "Post As" / "Booking" column value (e.g. "Womens Retreat", "Family Retreat"). Prefer the most descriptive name available. Use "" if none.
@@ -113,7 +141,9 @@ function buildResponseSchema() {
           type: 'object',
           properties: {
             activity: { type: 'string' },
-            // Allow "" for rows whose day can't be determined.
+            // Raw date heading (e.g. "6/20/2026"); we compute the weekday from it.
+            date: { type: 'string' },
+            // Only set when the document literally prints a weekday word; "" otherwise.
             day: { type: 'string', enum: [...DAYS, ''] },
             start_time: { type: 'string' },
             end_time: { type: 'string' },
@@ -121,7 +151,7 @@ function buildResponseSchema() {
             facilitators: { type: 'array', items: { type: 'string' } },
             notes: { type: 'string' },
           },
-          required: ['activity', 'day', 'start_time', 'end_time', 'group_name', 'facilitators', 'notes'],
+          required: ['activity', 'date', 'day', 'start_time', 'end_time', 'group_name', 'facilitators', 'notes'],
           additionalProperties: false,
         },
       },
@@ -242,9 +272,13 @@ async function analyzeFile(file, activities) {
     if (TIME_OPTIONS.indexOf(end) - startIdx < MIN_SLOTS) {
       end = TIME_OPTIONS[Math.min(startIdx + MIN_SLOTS, TIME_OPTIONS.length - 1)];
     }
+    // The date heading is authoritative — compute the weekday from it. Only
+    // fall back to a literal weekday word when no date was found. Leave blank
+    // (so the row is flagged for input) when neither is present.
+    const day = dateToWeekday(e.date) || normalizeDay(e.day);
     return {
       activity: normalizeActivity(e.activity, activities),
-      day: normalizeDay(e.day),
+      day,
       start_time: start,
       end_time: end,
       group_name: e.group_name || '',
@@ -348,6 +382,10 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
     entries.filter((_, i) => selected.has(i)).map((e) => e.activity).filter(Boolean),
   )].filter((n) => !knownActivities.has(n.toLowerCase()));
 
+  // Selected entries with no day (no date heading and no weekday word) must be
+  // resolved before import — the user picks a day inline on the card.
+  const selectedMissingDay = entries.filter((e, i) => selected.has(i) && !e.day).length;
+
   return (
     <>
       <div className="modal-backdrop" onClick={onClose}>
@@ -448,51 +486,71 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
                       <span className="ai-new-activities-names">{newActivityTypes.join(', ')}</span>
                     </div>
                   )}
+                  {selectedMissingDay > 0 && (
+                    <div className="ai-needs-day" role="alert">
+                      {selectedMissingDay} selected {selectedMissingDay === 1 ? 'entry has' : 'entries have'} no date in the document — pick a day on {selectedMissingDay === 1 ? 'it' : 'each'} before adding.
+                    </div>
+                  )}
                   <div className="ai-entry-list">
                     {entries.map((entry, i) => {
                       const colors = ACTIVITY_COLORS[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
                       return (
                         <label
                           key={i}
-                          className={`ai-entry-card${selected.has(i) ? ' selected' : ''}`}
+                          className={`ai-entry-card${selected.has(i) ? ' selected' : ''}${!entry.day ? ' needs-day' : ''}`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={selected.has(i)}
-                            onChange={() => toggleEntry(i)}
-                            className="ai-entry-check"
-                          />
-                          <div className="ai-entry-body">
-                            <span
-                              className="ai-entry-activity"
-                              style={entry.activity
-                                ? { background: colors.bg, borderColor: colors.border, color: colors.text }
-                                : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-faint)', fontStyle: 'italic' }}
+                          <div className="ai-entry-top">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(i)}
+                              onChange={() => toggleEntry(i)}
+                              className="ai-entry-check"
+                            />
+                            <div className="ai-entry-body">
+                              <span
+                                className="ai-entry-activity"
+                                style={entry.activity
+                                  ? { background: colors.bg, borderColor: colors.border, color: colors.text }
+                                  : { background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text-faint)', fontStyle: 'italic' }}
+                              >
+                                {entry.activity || 'Unknown activity'}
+                              </span>
+                              <span className="ai-entry-time">
+                                {entry.day ? (
+                                  entry.day
+                                ) : (
+                                  <select
+                                    className="ai-entry-day-select"
+                                    value=""
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => { e.preventDefault(); updateEntry(i, { day: e.target.value }); }}
+                                    aria-label="Set day for this entry"
+                                  >
+                                    <option value="" disabled>Pick a day…</option>
+                                    {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                                  </select>
+                                )}
+                                {' · '}{formatTime(entry.start_time)}–{formatTime(entry.end_time)}
+                              </span>
+                              {entry.group_name && (
+                                <span className="ai-entry-meta">{entry.group_name}</span>
+                              )}
+                              {entry.facilitators.length > 0 && (
+                                <span className="ai-entry-meta">{entry.facilitators.join(', ')}</span>
+                              )}
+                              {entry.notes && (
+                                <span className="ai-entry-meta ai-entry-notes">{entry.notes}</span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className="ai-entry-edit-btn"
+                              onClick={(e) => { e.preventDefault(); setEditingIdx(i); }}
+                              aria-label="Edit entry"
                             >
-                              {entry.activity || 'Unknown activity'}
-                            </span>
-                            <span className="ai-entry-time">
-                              {entry.day || <em style={{ fontStyle: 'italic', color: 'var(--text-faint)' }}>Unknown day</em>}
-                              {' · '}{formatTime(entry.start_time)}–{formatTime(entry.end_time)}
-                            </span>
-                            {entry.group_name && (
-                              <span className="ai-entry-meta">{entry.group_name}</span>
-                            )}
-                            {entry.facilitators.length > 0 && (
-                              <span className="ai-entry-meta">{entry.facilitators.join(', ')}</span>
-                            )}
-                            {entry.notes && (
-                              <span className="ai-entry-meta ai-entry-notes">{entry.notes}</span>
-                            )}
+                              Edit
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className="ai-entry-edit-btn"
-                            onClick={(e) => { e.preventDefault(); setEditingIdx(i); }}
-                            aria-label="Edit entry"
-                          >
-                            Edit
-                          </button>
                         </label>
                       );
                     })}
@@ -511,7 +569,7 @@ export default function AIUploadModal({ weekLabel, weekStart, activities: activi
                   <button
                     type="button"
                     className="btn-primary"
-                    disabled={selected.size === 0}
+                    disabled={selected.size === 0 || selectedMissingDay > 0}
                     onClick={handleImport}
                   >
                     Add {selected.size} {selected.size === 1 ? 'entry' : 'entries'}
