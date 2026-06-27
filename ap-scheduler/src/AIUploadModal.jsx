@@ -188,6 +188,10 @@ async function callAnthropic(file, base64, apiKey, activities) {
       // Sonnet 4.6 allows up to 64K output; 16K gives a multi-page report with
       // many rows room to finish (you're only billed for tokens generated).
       max_tokens: 16000,
+      // Extraction must be reproducible: temperature 0 makes the model pick the
+      // same rows each run instead of re-sampling a different count (the API
+      // default is 1.0, which is why the same document yielded varying totals).
+      temperature: 0,
       // Constrain the reply to our exact JSON shape (GA, no beta header).
       output_config: {
         format: { type: 'json_schema', schema: buildResponseSchema() },
