@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
-import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal, initials } from './utils';
+import { formatTime, toMinutes, durationLabel, minutesToHHMM, roundToQuarter, getDayDate, ordinal, initials, matchesStaffFilter } from './utils';
 
 function EntryInfoCard({ entry, activityColors, staff, onEdit, onDelete, onClose }) {
   const colors = activityColors[entry.activity] || { bg: '#f1f5f9', border: '#94a3b8', text: '#334155' };
@@ -260,12 +260,13 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
       : e.time_slot ? formatTime(e.time_slot) : '';
     const dur = durationLabel(e.start_time, e.end_time);
     const isConflict = conflicts.has(e.id);
-    const isDimmed = filterStaff.length > 0 && !facilitators.some((f) => filterStaff.includes(f));
+    const isDimmed = !matchesStaffFilter(e, filterStaff);
     const compact = height < 44;
     const tooltip = [
       e.activity,
       e.group_name,
       timeRange,
+      dur,
       facilitators.join(', '),
       e.notes,
       e.cancelled ? 'Cancelled' : '',
@@ -318,7 +319,7 @@ export default function WeekGrid({ weekStart, entries, staff, onAdd, onEdit, onD
     const colors = ACTIVITY_COLORS[e.activity] || {};
     const facilitators = getFacilitators(e);
     const isConflict = conflicts.has(e.id);
-    const isDimmed = filterStaff.length > 0 && !facilitators.some((f) => filterStaff.includes(f));
+    const isDimmed = !matchesStaffFilter(e, filterStaff);
     const start = e.start_time ? formatTime(e.start_time) : e.time_slot ? formatTime(e.time_slot) : '';
     const end = e.end_time ? formatTime(e.end_time) : '';
     const dur = durationLabel(e.start_time, e.end_time);

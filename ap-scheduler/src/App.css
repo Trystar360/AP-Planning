@@ -246,6 +246,29 @@ body {
   gap: 8px;
   padding: 0 10px;
   min-width: 0;
+  position: relative;
+  cursor: pointer;
+}
+.week-label:hover .week-range { color: var(--primary); }
+
+/* Invisible native date input stretched over the week label, so tapping the
+   label opens the browser's date picker to jump to any week. */
+.week-jump-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.week-jump-input:focus-visible {
+  opacity: 1;
+  background: var(--surface);
+  outline: 2px solid var(--primary);
+  border-radius: var(--radius-sm);
 }
 
 .week-range {
@@ -1278,6 +1301,30 @@ button.summary-staff:focus-visible { outline: 2px solid var(--primary); outline-
 }
 
 .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.time-dur-hint {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: -8px;
+  font-family: var(--font-mono);
+}
+
+/* Live double-booking warning inside the entry modal */
+.clash-warning {
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.clash-warning ul { list-style: none; }
+.clash-warning-note { font-size: 0.72rem; color: var(--warning-text); opacity: 0.8; }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; flex-wrap: wrap; align-items: center; }
 .modal-delete-btn { margin-right: auto; }

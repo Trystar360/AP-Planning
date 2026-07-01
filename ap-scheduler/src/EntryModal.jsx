@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ACTIVITIES as DEFAULT_ACTIVITIES, DAYS, TIME_OPTIONS } from './constants';
-import { formatTime, getDayDate, ordinal } from './utils';
+import { formatTime, getDayDate, ordinal, toMinutes, durationLabel, getFacilitators } from './utils';
 
 function addOneHour(t) {
   const [h, m] = t.split(':').map(Number);
@@ -8,13 +8,26 @@ function addOneHour(t) {
   return `${String(nh).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function normFacilitators(entry) {
-  if (Array.isArray(entry?.facilitators)) return entry.facilitators;
-  if (entry?.staff) return [entry.staff]; // backward-compat
-  return [];
+// Other entries this week that would double-book one of the selected
+// facilitators if the form were saved as-is.
+function findClashes(form, entries, editingId) {
+  if (!form.facilitators.length || form.cancelled) return [];
+  const start = toMinutes(form.start_time);
+  const end = toMinutes(form.end_time);
+  const clashes = [];
+  entries.forEach((e) => {
+    if (e.id === editingId || e.cancelled || e.day !== form.day) return;
+    const eStart = toMinutes(e.start_time || e.time_slot || '00:00');
+    const eEndRaw = toMinutes(e.end_time || '');
+    const eEnd = eEndRaw > eStart ? eEndRaw : eStart + 30;
+    if (start >= eEnd || eStart >= end) return;
+    const names = getFacilitators(e).filter((n) => form.facilitators.includes(n));
+    if (names.length) clashes.push({ entry: e, names });
+  });
+  return clashes;
 }
 
-export default function EntryModal({ mode, entry, staff, activities: activitiesProp, weekStart, onSave, onDuplicate, onDelete, onClose, onOpenFacilitators }) {
+export default function EntryModal({ mode, entry, staff, activities: activitiesProp, weekStart, entries = [], onSave, onDuplicate, onDelete, onClose, onOpenFacilitators }) {
   const baseActivityNames = activitiesProp?.length ? activitiesProp.map((a) => a.name) : DEFAULT_ACTIVITIES;
   // Keep the entry's current activity selectable even if it's a brand-new type
   // not yet in the list (e.g. just extracted by AI import).
@@ -28,7 +41,7 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
     start_time: defaultStart,
     end_time: entry?.end_time || addOneHour(defaultStart),
     group_name: entry?.group_name || '',
-    facilitators: normFacilitators(entry),
+    facilitators: getFacilitators(entry),
     notes: entry?.notes || '',
     cancelled: entry?.cancelled || false,
   });
@@ -71,6 +84,9 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
 
   const startOptions = TIME_OPTIONS.filter((t) => t < '21:00');
   const endOptions = TIME_OPTIONS.filter((t) => t > form.start_time);
+
+  const clashes = findClashes(form, entries, mode === 'edit' ? entry?.id : undefined);
+  const dur = durationLabel(form.start_time, form.end_time);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -127,6 +143,7 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
               </select>
             </label>
           </div>
+          {dur && <div className="time-dur-hint">Duration: {dur}</div>}
           <fieldset className="facilitator-fieldset">
             <legend>Facilitator(s)</legend>
             {staff.length === 0 && (
@@ -152,6 +169,23 @@ export default function EntryModal({ mode, entry, staff, activities: activitiesP
               ))}
             </div>
           </fieldset>
+          {clashes.length > 0 && (
+            <div className="clash-warning" role="alert">
+              <strong>⚠ Double-booking</strong>
+              <ul>
+                {clashes.map(({ entry: c, names }) => (
+                  <li key={c.id}>
+                    {names.join(' and ')} {names.length === 1 ? 'is' : 'are'} already on{' '}
+                    <strong>{c.activity}</strong>
+                    {c.start_time && c.end_time
+                      ? ` (${formatTime(c.start_time)} – ${formatTime(c.end_time)})`
+                      : ''}
+                  </li>
+                ))}
+              </ul>
+              <span className="clash-warning-note">You can still save — the clash will stay flagged on the grid.</span>
+            </div>
+          )}
           <label>
             Notes (optional)
             <input

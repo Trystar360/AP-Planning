@@ -1,11 +1,5 @@
 import { ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
-import { toMinutes, formatMinutes, doubleBookedFacilitators } from './utils';
-
-function getFacilitators(e) {
-  if (Array.isArray(e.facilitators)) return e.facilitators;
-  if (e.staff) return [e.staff];
-  return [];
-}
+import { toMinutes, formatMinutes, doubleBookedFacilitators, getFacilitators, UNASSIGNED } from './utils';
 
 export default function SummaryBar({ entries: allEntries, staff, activityColors: activityColorsProp, filterStaff = [], onToggleFacilitator }) {
   const ACTIVITY_COLORS = activityColorsProp && Object.keys(activityColorsProp).length ? activityColorsProp : DEFAULT_ACTIVITY_COLORS;
@@ -21,7 +15,7 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
   entries.forEach((e) => {
     const names = getFacilitators(e);
     const mins = Math.max(0, toMinutes(e.end_time || e.start_time) - toMinutes(e.start_time));
-    const targets = names.length > 0 ? names : ['Unassigned'];
+    const targets = names.length > 0 ? names : [UNASSIGNED];
     targets.forEach((name) => {
       if (!byFacilitator[name]) byFacilitator[name] = { count: 0, mins: 0 };
       byFacilitator[name].count += 1;
@@ -29,7 +23,8 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
     });
   });
 
-  const staffColor = (name) => staffColorByIndex(staff.findIndex((s) => s.name === name));
+  const staffColor = (name) =>
+    name === UNASSIGNED ? 'var(--text-faint)' : staffColorByIndex(staff.findIndex((s) => s.name === name));
   const doubleBooked = doubleBookedFacilitators(allEntries);
 
   const activities = Object.entries(byActivity).sort((a, b) => b[1] - a[1]);
@@ -61,7 +56,9 @@ export default function SummaryBar({ entries: allEntries, staff, activityColors:
             const conflict = doubleBooked.has(name);
             const title = conflict
               ? `${name} is double-booked${onToggleFacilitator ? ' — tap to filter' : ''}`
-              : onToggleFacilitator ? `Tap to filter to ${name}` : undefined;
+              : onToggleFacilitator
+                ? name === UNASSIGNED ? 'Tap to show activities that still need staffing' : `Tap to filter to ${name}`
+                : undefined;
             return (
               <button
                 key={name}

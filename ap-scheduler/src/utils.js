@@ -87,6 +87,25 @@ export function ordinal(n) {
   }
 }
 
+// Facilitators assigned to an entry, tolerating the legacy single-`staff` shape.
+export function getFacilitators(e) {
+  if (Array.isArray(e?.facilitators)) return e.facilitators;
+  if (e?.staff) return [e.staff];
+  return [];
+}
+
+// Label used in the totals bar for entries with no facilitator. Selecting it
+// as a filter means "show only unstaffed activities".
+export const UNASSIGNED = 'Unassigned';
+
+export function matchesStaffFilter(entry, filterNames) {
+  if (!filterNames?.length) return true;
+  const facs = getFacilitators(entry);
+  return filterNames.some((name) =>
+    name === UNASSIGNED ? facs.length === 0 : facs.includes(name)
+  );
+}
+
 // Names of facilitators who are double-booked somewhere this week — i.e. they
 // have two or more overlapping, non-cancelled activities on the same day.
 // Mirrors the per-entry conflict logic in WeekGrid, but keyed by name so the
