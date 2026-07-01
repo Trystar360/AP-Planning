@@ -16,7 +16,7 @@ import {
   fetchActivities, saveActivity, updateActivity, deleteActivity,
   isShared,
 } from './api';
-import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks } from './utils';
+import { getWeekStart, formatWeekStart, formatWeekLabel, addWeeks, UNASSIGNED } from './utils';
 import { exportICS, exportCSV } from './exporters';
 import './App.css';
 
@@ -300,10 +300,32 @@ export default function App() {
   const prevWeek = () => setWeekStart((w) => addWeeks(w, -1));
   const nextWeek = () => setWeekStart((w) => addWeeks(w, 1));
   const goToday = () => setWeekStart(currentWeek);
+  const jumpToDate = (value) => {
+    if (!value) return;
+    setWeekStart(formatWeekStart(getWeekStart(new Date(value + 'T00:00:00'))));
+  };
+
+  // Keyboard shortcuts: ← / → change week, T jumps to today.
+  // Ignored while typing or while any modal/dialog is open.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (
+        t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable
+      )) return;
+      if (document.querySelector('.modal-backdrop')) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevWeek(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); nextWeek(); }
+      else if (e.key === 't' || e.key === 'T') goToday();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const isCurrentWeek = weekStart === currentWeek;
   const printTitle = filterStaff.length === 1
-    ? `Print ${filterStaff[0]}'s rota`
+    ? (filterStaff[0] === UNASSIGNED ? 'Print unassigned activities' : `Print ${filterStaff[0]}'s rota`)
     : filterStaff.length > 1
       ? `Print ${filterStaff.length} facilitators' rota`
       : 'Print schedule';
@@ -377,14 +399,21 @@ export default function App() {
 
         <div className="week-nav">
           <div className="week-switcher">
-            <button className="nav-btn" onClick={prevWeek} aria-label="Previous week">‹</button>
-            <div className="week-label">
+            <button className="nav-btn" onClick={prevWeek} aria-label="Previous week" title="Previous week (←)">‹</button>
+            <label className="week-label" title="Jump to a specific week">
               <span className="week-range">{formatWeekLabel(weekStart)}</span>
               {isCurrentWeek && <span className="this-week-badge">This week</span>}
-            </div>
-            <button className="nav-btn" onClick={nextWeek} aria-label="Next week">›</button>
+              <input
+                type="date"
+                className="week-jump-input"
+                aria-label="Jump to week containing date"
+                value={weekStart}
+                onChange={(e) => jumpToDate(e.target.value)}
+              />
+            </label>
+            <button className="nav-btn" onClick={nextWeek} aria-label="Next week" title="Next week (→)">›</button>
           </div>
-          {!isCurrentWeek && <button className="btn-today" onClick={goToday}>Today</button>}
+          {!isCurrentWeek && <button className="btn-today" onClick={goToday} title="Back to this week (T)">Today</button>}
 
           <div className="toolbar">
             <label className="toggle-label" title="Show the full 8am–9pm day instead of just busy hours">
@@ -405,7 +434,9 @@ export default function App() {
           <div className="filter-active-bar">
             <span>
               {filterStaff.length === 1
-                ? <>Showing <strong>{filterStaff[0]}</strong>'s shifts only</>
+                ? filterStaff[0] === UNASSIGNED
+                  ? <>Showing <strong>unassigned</strong> activities only</>
+                  : <>Showing <strong>{filterStaff[0]}</strong>'s shifts only</>
                 : <>Showing shifts for <strong>{filterStaff.join(', ')}</strong></>}
             </span>
             <button className="btn-ghost filter-clear" onClick={() => setFilterStaff([])}>✕ Clear</button>
@@ -451,6 +482,7 @@ export default function App() {
           staff={staff}
           activities={activities}
           weekStart={weekStart}
+          entries={entries}
           onSave={handleSave}
           onDuplicate={handleDuplicate}
           onDelete={modal.mode === 'edit' ? () => { setModal(null); handleDelete(modal.entry.id); } : undefined}

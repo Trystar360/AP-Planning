@@ -1,11 +1,5 @@
 import { DAYS, ACTIVITY_COLORS as DEFAULT_ACTIVITY_COLORS, staffColorByIndex } from './constants';
-import { formatTime, toMinutes, durationLabel, formatWeekLabel } from './utils';
-
-function getFacilitators(e) {
-  if (Array.isArray(e.facilitators)) return e.facilitators;
-  if (e.staff) return [e.staff];
-  return [];
-}
+import { formatTime, toMinutes, durationLabel, formatWeekLabel, getFacilitators, matchesStaffFilter, UNASSIGNED } from './utils';
 
 function dayDate(weekStart, dayIndex) {
   const d = new Date(weekStart + 'T00:00:00');
@@ -29,7 +23,7 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
   const isFiltered = filterNames.length > 0;
 
   const filtered = isFiltered
-    ? entries.filter((e) => getFacilitators(e).some((f) => filterNames.includes(f)))
+    ? entries.filter((e) => matchesStaffFilter(e, filterNames))
     : entries;
 
   const byDay = DAYS.map((day, i) => {
@@ -70,7 +64,7 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
   const title = !isFiltered
     ? 'Weekly Activity Schedule'
     : filterNames.length === 1
-      ? `${filterNames[0]}'s Schedule`
+      ? filterNames[0] === UNASSIGNED ? 'Unassigned Activities' : `${filterNames[0]}'s Schedule`
       : "Selected Facilitators' Schedule";
   const printDate = new Date().toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -258,7 +252,7 @@ export default function PrintView({ entries, weekStart, filterStaff, staff = [],
       )}
 
       <div className="pv-footer">
-        <span>AP Scheduler — {isFiltered ? (filterNames.length === 1 ? `${filterNames[0]}'s rota` : `${filterNames.length} facilitators' rota`) : 'Full schedule'}</span>
+        <span>AP Scheduler — {isFiltered ? (filterNames.length === 1 ? (filterNames[0] === UNASSIGNED ? 'Unassigned activities' : `${filterNames[0]}'s rota`) : `${filterNames.length} facilitators' rota`) : 'Full schedule'}</span>
         <span>{formatWeekLabel(weekStart)}</span>
         <span>Printed {printDate}</span>
       </div>
